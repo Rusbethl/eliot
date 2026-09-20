@@ -1,0 +1,123 @@
+{# Reusable Jinja macros for wave-alpha UI.
+   Import in any template with: {% from "_macros.html" import pat, wlabel, pill, tri, icon, gloss %} #}
+
+{# pat(name) — colored Elliott pattern badge. Maps known names; unknowns get .pat.unknown #}
+{% macro pat(name) -%}
+  {% if not name %}<span class="pat unknown">—</span>
+  {% else %}
+    {% set n = name|lower %}
+    {% if n == "impulse" %}<span class="pat impulse">{{ name }}</span>
+    {% elif n == "zigzag" %}<span class="pat zigzag">{{ name }}</span>
+    {% elif n == "flat" %}<span class="pat flat">{{ name }}</span>
+    {% elif n == "expanded_flat" or n == "expanded flat" %}<span class="pat expanded-flat">{{ name }}</span>
+    {% elif n == "ending_diagonal" or n == "ending diagonal" %}<span class="pat end-diagonal">{{ name }}</span>
+    {% elif n == "contracting_triangle" or n == "contracting triangle" %}<span class="pat contracting">{{ name }}</span>
+    {% else %}<span class="pat unknown">{{ name }}</span>
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{# wlabel(label) — 1..5 / A / B / C — circular wave label badge #}
+{% macro wlabel(label) -%}
+  {% if not label %}<span class="wlabel unknown">·</span>
+  {% else %}
+    {% set l = label|string|upper %}
+    {% if l == "1" %}<span class="wlabel w1">1</span>
+    {% elif l == "2" %}<span class="wlabel w2">2</span>
+    {% elif l == "3" %}<span class="wlabel w3">3</span>
+    {% elif l == "4" %}<span class="wlabel w4">4</span>
+    {% elif l == "5" %}<span class="wlabel w5">5</span>
+    {% elif l == "A" %}<span class="wlabel wa">A</span>
+    {% elif l == "B" %}<span class="wlabel wb">B</span>
+    {% elif l == "C" %}<span class="wlabel wc">C</span>
+    {% else %}<span class="wlabel unknown">{{ label }}</span>
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{# pill(text, kind) — kind ∈ bull|bear|warn|cyan|mag|purple|indigo|teal|lime|orange|rose|muted #}
+{% macro pill(text, kind="muted", dot=false) -%}
+  <span class="pill {{ kind }}">{% if dot %}<span class="dot"></span>{% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{# tri(badge_list) — badge_list comes from web/coherence_badge.py:build_tri_badge.
+   Each item is (label, status) where status ∈ "ok"|"warn"|"missing". #}
+{% macro tri(badge_list) -%}
+  {% if not badge_list %}<span class="tri-cell missing">—</span>
+  {% else %}
+    <span class="tri">
+      {% for label, status in badge_list -%}
+        <span class="tri-cell {{ status }}">{{ label }}{% if status == "ok" %} ✓{% elif status == "warn" %} ⚠{% endif %}</span>
+      {%- endfor %}
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{# icon(name) — inline Heroicons-shaped SVG. Matches stroke="currentColor" so they
+   inherit color via CSS. Add new icons below as needed. #}
+{% macro icon(name, size=16) -%}
+  {% set s = size|string %}
+  {% if name == "search" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  {% elif name == "calendar" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+  {% elif name == "arrow-right" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 5l7 7-7 7M3 12h18"/></svg>
+  {% elif name == "plus" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+  {% elif name == "download" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+  {% elif name == "info" %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+  {% else %}
+    <svg width="{{ s }}" height="{{ s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>
+  {% endif %}
+{%- endmacro %}
+
+{# gloss(term, tip) — keyboard-accessible tooltip term. Wraps inline terms with
+   tabindex=0 so keyboard users can focus the term and reveal the tooltip. #}
+{% macro gloss(term, tip) -%}
+  <span class="gloss" tabindex="0" data-tip="{{ tip }}" role="button" aria-label="{{ term }}: {{ tip }}">{{ term }}</span>
+{%- endmacro %}
+
+{# popover(headline, anchor=None) — click-pinned trust popover.
+   Use as a {% call %} block. The body block becomes the popover body.
+   When `anchor` is supplied, a "Learn more →" link to /about#<anchor> is appended.
+
+   IMPORTANT: do NOT call this inside a <p> tag. The macro renders block-level
+   elements (<div class="popover-card"> and a <table>), which the HTML parser
+   auto-closes any enclosing <p>. Wrap in <div> or place as a sibling instead.
+
+   Body content convention: <p class="popover-narrative">…</p> followed by an
+   optional <table class="popover-data">.
+
+   See docs/superpowers/specs/2026-05-10-trust-popups-design.md for usage. #}
+{% macro popover(headline, anchor=none) -%}
+  {% set uid = range(1, 100000000) | random %}
+  <span class="popover" x-data="popover()">
+    <button type="button"
+            class="popover-trigger"
+            aria-label="Show details for {{ headline }}"
+            x-on:click="open = !open"
+            x-bind:aria-expanded="open">?</button>
+    <div class="popover-card"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="popover-head-{{ uid }}"
+         x-show="open"
+         x-on:keydown.escape.window="open = false"
+         x-on:click.outside="open = false"
+         x-cloak>
+      <div class="popover-head">
+        <span class="popover-headline" id="popover-head-{{ uid }}">{{ headline }}</span>
+        <button type="button" class="popover-close"
+                aria-label="Close"
+                x-on:click="open = false">&times;</button>
+      </div>
+      <div class="popover-body">{{ caller() }}</div>
+      {% if anchor %}
+        <a class="popover-more" href="/about#{{ anchor }}">Learn more &rarr;</a>
+      {% endif %}
+    </div>
+  </span>
+{%- endmacro %}

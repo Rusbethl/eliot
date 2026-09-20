@@ -1,0 +1,28 @@
+name: wxy
+direction_alternates: true
+waves: ["W", "X", "Y"]
+constraints:
+  - name: x_shorter_than_w
+    severity: hard
+    expr: "length(WX) < length(WW)"
+    rationale: "Connector X is shorter than the corrective W it joins."
+  - name: x_shorter_than_y
+    severity: hard
+    expr: "length(WX) < length(WY)"
+    rationale: "Connector X is shorter than the corrective Y it joins."
+  - name: y_at_least_0618_w
+    severity: soft
+    expr: "length(WY) >= Decimal('0.618') * length(WW)"
+    rationale: "Y typically reaches at least 0.618x W."
+  - name: y_at_most_1618_w
+    severity: soft
+    expr: "length(WY) <= Decimal('1.618') * length(WW)"
+    rationale: "Y rarely extends more than 1.618x W; outliers are usually misclassified."
+  - name: x_max_retrace_of_w
+    severity: soft
+    expr: "retrace(WX, WW) <= Decimal('0.786')"
+    rationale: "X usually retraces W partially, not fully."
+allowed_sub_patterns:
+  "W": ["zigzag", "flat", "expanded_flat", "contracting_triangle"]
+  "X": ["zigzag", "flat", "expanded_flat", "contracting_triangle"]
+  "Y": ["zigzag", "flat", "expanded_flat", "contracting_triangle"]

@@ -1,0 +1,71 @@
+# wave-alpha curated 50-ticker backtest universe (v0.4)
+# Mix of sectors, vol regimes, market caps, and IPO ages.
+# Source list — change carefully; backtest comparability depends on stability.
+
+# Mega-cap tech
+AAPL
+MSFT
+GOOGL
+AMZN
+NVDA
+META
+TSLA
+
+# Other tech
+ORCL
+CRM
+ADBE
+NFLX
+AMD
+INTC
+QCOM
+
+# Defensive (consumer staples + utilities)
+KO
+PG
+WMT
+COST
+PEP
+JNJ
+PFE
+NEE
+SO
+
+# Cyclical (industrials + discretionary)
+CAT
+DE
+GE
+UPS
+F
+HD
+LOW
+NKE
+SBUX
+
+# Financials
+JPM
+BAC
+GS
+MS
+V
+MA
+BRK.B
+
+# Energy
+XOM
+CVX
+COP
+
+# Biotech / healthcare
+LLY
+UNH
+ABBV
+TMO
+
+# Mid-caps + recent-ish IPOs
+SNOW
+PLTR
+RBLX
+COIN
+
+# Counts: 50 tickers

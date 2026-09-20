@@ -1,0 +1,11 @@
+# Phase 2 winner cell (replicated for the EBT-refit validation pass).
+# Spec: docs/superpowers/specs/2026-05-07-ebt-empirical-fit-design.md §3.3
+# Source: reports/grid-2026-05-06/phase2/grid.md "Best cell"
+direction_modes: [long]
+entry_trigger: immediate
+stop_source: atr_multiple
+target_source: fib_extension
+target_R: null  # ignored when target_source != fixed_R
+slippage_bps: 5
+time_stop_mode: degree_based
+min_confidence: 0.45

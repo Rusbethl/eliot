@@ -1,0 +1,31 @@
+{% from "_macros.html" import pat, wlabel, pill, popover %}
+<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+  {% if sig %}
+    {% if sig.direction == "long" %}{{ pill("LONG · final " + "%.2f"|format(sig.confidence), "bull", dot=true) }}
+    {% else %}{{ pill("SHORT · final " + "%.2f"|format(sig.confidence), "bear", dot=true) }}{% endif %}
+  {% else %}{{ pill("no signal", "muted") }}{% endif %}
+  {% if top %}{{ pat(top.count.pattern) }}{% endif %}
+  {% if sig and sig.wave_label %}{{ wlabel(sig.wave_label) }}{% endif %}
+</div>
+{% if top or sig or last_close %}
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px;">
+    <div class="kpi"><div class="kpi-label">Last close</div>
+      <div class="kpi-value">{{ "%.2f"|format(last_close|float) if last_close else "—" }}</div></div>
+    <div class="kpi mag">
+      <div class="kpi-label">Confidence
+        {% call popover("What confidence means", anchor="alpha-blend") %}
+          <p class="popover-narrative">Confidence is C1's final score after the coherence multiplier. Above 0.7 is rare; the median across signals is around 0.45.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value">{{ "%.2f"|format(sig.confidence) if sig else "—" }}</div>
+    </div>
+    <div class="kpi bull">
+      <div class="kpi-label">R:R
+        {% call popover("How R:R is computed", anchor="trade-plan") %}
+          <p class="popover-narrative">Reward&#58;risk = (target &minus; entry) &divide; (entry &minus; stop). Targets use <code>fib_extension</code> by default; switch to <code>fixed_R</code> in Settings to use a multiple of the entry-to-stop distance instead.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value glow-bull">{{ "%.2f"|format(sig.rr) if sig else "—" }}</div>
+    </div>
+  </div>
+{% endif %}

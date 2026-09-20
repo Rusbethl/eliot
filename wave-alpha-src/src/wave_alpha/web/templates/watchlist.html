@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% set active = "watchlist" %}
+{% block title %}Watchlist — wave-alpha{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Watchlist</h1>
+      <p class="page-sub">
+        {{ enriched|length }} symbol{{ "s" if enriched|length != 1 else "" }}
+        {% if latest_scan_id %} · last refreshed from scan {{ latest_scan_id }}
+        {% else %} · no scans yet — add symbols and run <code style="font-family: var(--font-mono); color: var(--cyan);">uv run wave-alpha scan</code>{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3 class="card-title">Add symbol</h3></div>
+    <form method="post" action="/watchlist/add" style="display: flex; gap: 8px;">
+      <input class="input mono" name="symbol" placeholder="AAPL" autocapitalize="characters" required style="flex: 1;">
+      <button class="btn btn-primary" type="submit">{{ icon('plus', 14) }}Add</button>
+    </form>
+    <p class="field-help">
+      Bulk import:
+      <code style="font-family: var(--font-mono); color: var(--magenta);">uv run wave-alpha watchlist import &lt;file&gt; --format csv|tv-txt</code>
+    </p>
+  </div>
+
+  <div class="card dt-card">
+    {% include "_watchlist_table.html" %}
+  </div>
+</div>
+{% endblock %}

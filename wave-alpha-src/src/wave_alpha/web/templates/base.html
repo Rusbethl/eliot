@@ -1,0 +1,61 @@
+{% from "_macros.html" import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}wave-alpha{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
+  <script defer src="/static/vendor/htmx/htmx.min.js?v={{ asset_v }}"></script>
+  <script defer src="/static/popover.js?v={{ asset_v }}"></script>
+  <script defer src="/static/vendor/alpine/alpine.min.js?v={{ asset_v }}"></script>
+  {# Page-specific scripts. Only the deepdive page needs lightweight-charts
+     (~176 KB) and deepdive.js; pulling them out of base.html keeps the
+     other pages' DOMContentLoaded from waiting on charting JS. #}
+  {% block page_scripts %}{% endblock %}
+</head>
+<body
+  x-data="{
+    asof: localStorage.getItem('wave_alpha_as_of') || new URLSearchParams(window.location.search).get('as_of') || new Date().toISOString().slice(0,10),
+    setAsof(v) {
+      this.asof = v;
+      try { localStorage.setItem('wave_alpha_as_of', v); } catch(e) {}
+    },
+    submitTicker(ev) {
+      ev.preventDefault();
+      const t = (this.$refs.tickerInput.value || '').trim().toUpperCase();
+      if (!t) return;
+      const url = `/deepdive/${encodeURIComponent(t)}?as_of=${encodeURIComponent(this.asof)}`;
+      window.location.href = url;
+    },
+  }"
+  @keydown.window.meta.k.prevent="$refs.tickerInput.focus(); $refs.tickerInput.select();"
+  @keydown.window.ctrl.k.prevent="$refs.tickerInput.focus(); $refs.tickerInput.select();"
+>
+  <nav class="topnav">
+    <a class="brand" href="/"><span class="brand-mark"></span><span class="brand-name">wave-alpha</span></a>
+    <div class="nav-links">
+      <a class="nav-link {% if active == 'home' %}active{% endif %}" href="/">Home</a>
+      <a class="nav-link {% if active == 'scan' %}active{% endif %}" href="/scan">Scan</a>
+      <a class="nav-link {% if active == 'watchlist' %}active{% endif %}" href="/watchlist">Watchlist</a>
+      <a class="nav-link {% if active == 'settings' %}active{% endif %}" href="/settings">Settings</a>
+      <a class="nav-link nav-link-muted {% if active == 'about' %}active{% endif %}" href="/about">About</a>
+    </div>
+    <form class="search" @submit="submitTicker($event)">
+      {{ icon('search', 14) }}
+      <input x-ref="tickerInput" name="t" placeholder="Search ticker…" autocomplete="off" autocapitalize="characters">
+      <span class="kbd">⌘K</span>
+    </form>
+    <label class="asof">
+      {{ icon('calendar', 14) }}
+      <input type="date" :value="asof" @change="setAsof($event.target.value)">
+    </label>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <p class="disclaimer">{{ disclaimer.lstrip('⚠').strip() }}</p>
+</body>
+</html>

@@ -1,0 +1,69 @@
+name: version
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/**'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    # Skip if the head commit *subject* starts with "chore(release):"
+    # (the message semantic-release uses for the auto-bump commit) — otherwise
+    # we'd loop. startsWith on subject avoids false-matching commit bodies that
+    # mention the string. The tag push from this job re-triggers publish.yml
+    # because publish.yml is gated on tag pushes, not branch pushes.
+    if: >-
+      !startsWith(github.event.head_commit.message, 'chore(release):')
+      && (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install python-semantic-release
+        run: pip install "python-semantic-release>=8,<9"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Auto version bump (conventional commits)
+        if: github.event_name == 'push'
+        run: semantic-release version --no-vcs-release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Manual version bump
+        if: github.event_name == 'workflow_dispatch'
+        run: semantic-release version --${{ github.event.inputs.bump }} --no-vcs-release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Push version commit and tag
+        run: git push --follow-tags origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

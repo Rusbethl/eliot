@@ -1,0 +1,39 @@
+{% from "_macros.html" import tri, popover %}
+
+{% if not coh %}
+  <p style="margin: 0; color: var(--fg-muted);">Insufficient history for coherence.</p>
+{% else %}
+  {# Coherence ring + tri-badge + summary line #}
+  {% set coh_pct = (coh.score * 100)|round|int %}
+  {% set ring_circumference = 226.2 %}
+  {% set ring_offset = ring_circumference - (ring_circumference * coh.score) %}
+  <div style="display: grid; grid-template-columns: 90px 1fr; gap: 18px; align-items: center;">
+    <div class="ring">
+      <svg width="84" height="84" viewBox="0 0 84 84">
+        <circle cx="42" cy="42" r="36" stroke="rgba(124,139,163,0.15)" stroke-width="6" fill="none"/>
+        <circle cx="42" cy="42" r="36" stroke="#22D3EE" stroke-width="6" fill="none"
+                stroke-linecap="round" stroke-dasharray="{{ ring_circumference }}"
+                stroke-dashoffset="{{ ring_offset }}"
+                style="filter: drop-shadow(0 0 6px rgba(34,211,238,0.7));"/>
+      </svg>
+      <div class="pct"><span class="v">{{ "%.2f"|format(coh.score) }}</span><span class="l">coh</span></div>
+    </div>
+    <div>
+      {{ tri(badge) }}
+      <p style="margin: 8px 0 0; font-size: 13px; color: var(--fg-secondary);">
+        Multiplier ×{{ "%.2f"|format(coh.multiplier) }}.
+        {% if coh.fallback_used %}<span style="color: var(--warn);">{{ coh.fallback_used }}</span>{% endif %}
+      </p>
+      <div style="margin-top: 4px;">
+        {% call popover("How we got " ~ ("%.2f" | format(coh.multiplier)) ~ "×", anchor="coherence") %}
+          <p class="popover-narrative">Coherence multiplies the engine score by how strongly the weekly, daily, and 4-hour timeframes agree on the same wave count. High agreement = high confidence the count is real, not a chart artifact. The pairwise scores below show each timeframe pair's contribution.</p>
+        {% endcall %}
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 6px; font: 11px var(--font-mono); color: var(--fg-muted);">
+        {% for k, v in coh.pairwise.items() %}
+          <span>{{ k }}: <span style="color: var(--cyan);">{{ "%.2f"|format(v) }}</span></span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endif %}

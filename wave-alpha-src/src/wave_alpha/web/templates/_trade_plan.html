@@ -1,0 +1,47 @@
+{% from "_macros.html" import pill, popover %}
+
+{% if not sig %}
+  <p style="margin: 0; color: var(--fg-muted);">No trade plan derived for this count set (none meeting min_confidence).</p>
+{% else %}
+  <p style="margin: 4px 0 14px; color: var(--fg-secondary);">
+    {% if sig.direction == "long" %}
+      Enter near <strong>{{ sig.entry_price }}</strong>, stop below <strong>{{ sig.stop_price }}</strong>, first target <strong>{{ sig.target_price }}</strong>.
+    {% else %}
+      Enter near <strong>{{ sig.entry_price }}</strong>, stop above <strong>{{ sig.stop_price }}</strong>, first target <strong>{{ sig.target_price }}</strong>.
+    {% endif %}
+  </p>
+  <div style="margin: -8px 0 14px;">
+    {% call popover("How we picked these levels", anchor="trade-plan") %}
+      <p class="popover-narrative">
+        Entry is the close at the most recent confirming pivot. Stop hugs the prior wave's structural low. Target uses the active count's fib extension by default; switch to <code>fixed_R</code> in Settings to use a multiple of the entry-to-stop distance instead.
+      </p>
+      <table class="popover-data">
+        <tr><th>direction</th><td>{{ sig.direction|upper }}</td></tr>
+        <tr><th>entry</th><td class="num">{{ sig.entry_price }}</td></tr>
+        <tr><th>stop</th><td class="num">{{ sig.stop_price }}</td></tr>
+        <tr><th>target</th><td class="num">{{ sig.target_price }}</td></tr>
+        <tr><th>pattern</th><td>{{ sig.count_pattern }} (W{{ sig.wave_label }})</td></tr>
+        <tr class="total"><th>R:R</th><td class="num">{{ "%.2f"|format(sig.rr) }}</td></tr>
+      </table>
+    {% endcall %}
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+    <div><div class="kpi-label">Direction</div>
+      {% if sig.direction == "long" %}{{ pill("LONG", "bull", dot=true) }}
+      {% else %}{{ pill("SHORT", "bear", dot=true) }}{% endif %}</div>
+    <div><div class="kpi-label">Entry</div>
+      <div class="num" style="font-size: 16px; font-weight: 700;">{{ sig.entry_price }}</div></div>
+    <div><div class="kpi-label">Stop</div>
+      <div class="num glow-bear" style="font-size: 16px; font-weight: 700;">{{ sig.stop_price }}</div></div>
+    <div><div class="kpi-label">Target</div>
+      <div class="num glow-bull" style="font-size: 16px; font-weight: 700;">{{ sig.target_price }}</div></div>
+    <div><div class="kpi-label">R:R</div>
+      <div class="num glow-bull" style="font-size: 16px; font-weight: 700;">{{ "%.2f"|format(sig.rr) }}</div></div>
+    <div><div class="kpi-label">Bars to target</div>
+      <div class="num" style="font-size: 16px; font-weight: 700;">{{ sig.expected_bars_to_target }}</div></div>
+    <div><div class="kpi-label">Max hold</div>
+      <div class="num" style="font-size: 16px; font-weight: 700;">{{ sig.max_holding_bars }}</div></div>
+    <div style="grid-column: span 2;"><div class="kpi-label">Pattern</div>
+      <div style="font-size: 13px;">{{ sig.count_pattern }} (W{{ sig.wave_label }})</div></div>
+  </div>
+{% endif %}

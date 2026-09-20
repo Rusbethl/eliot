@@ -1,0 +1,11 @@
+<div id="chart-canvas" style="width: 100%; height: 480px;"></div>
+<script>
+  (function () {
+    var payload = {{ payload_json | safe }};
+    if (window.WaveAlpha && window.WaveAlpha.renderChart) {
+      window.WaveAlpha.renderChart('chart-canvas', payload);
+    } else {
+      window._waveAlphaPending = payload;
+    }
+  })();
+</script>

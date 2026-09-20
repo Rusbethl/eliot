@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pill, icon %}
+{% set active = "scan" %}
+{% block title %}Scan — wave-alpha{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  {% if not scan_ids %}
+    <div class="page-head"><div><h1 class="page-title">Scan</h1></div></div>
+    <div class="card empty">
+      <div class="empty-ico">{{ icon('search', 22) }}</div>
+      <h3 class="empty-title">No scans yet</h3>
+      <p class="empty-sub">A scan runs the wave engine across a list of tickers and saves the report. Run one from the CLI to populate this page.</p>
+      <code class="codeblock"><span class="c"># Scan a list of tickers as of today</span>
+<span class="k">uv run</span> wave-alpha scan <span class="s">--symbols AAPL,MSFT,NVDA,SPY</span></code>
+      <code class="codeblock"><span class="c"># Or use a curated universe file</span>
+<span class="k">uv run</span> wave-alpha scan <span class="s">--universe data/universe_curated.txt</span></code>
+      <p class="field-help" style="margin-top: 14px;">Once a scan finishes, refresh this page — it will appear here automatically.</p>
+    </div>
+  {% else %}
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Scan · <span class="glow-cyan">{{ current_id }}</span></h1>
+        <p class="page-sub">
+          {% if report %}
+            {{ report.n_total }} ticker{{ "s" if report.n_total != 1 else "" }} ·
+            {{ report.duration_seconds }}s ·
+            {{ report.n_with_signal }} signal{{ "s" if report.n_with_signal != 1 else "" }} ·
+            {{ report.n_errored }} error{{ "s" if report.n_errored != 1 else "" }}
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+      {% for sid in scan_ids[:5] %}
+        <a href="/scan/{{ sid }}"
+           style="text-decoration: none;">
+          <span class="pill {% if sid == current_id %}cyan{% else %}muted{% endif %}"
+                style="padding: 6px 12px; font-family: var(--font-mono);">{{ sid }}</span>
+        </a>
+      {% endfor %}
+      {% if scan_ids|length > 5 %}
+        <details>
+          <summary style="cursor: pointer; padding: 6px 12px; color: var(--fg-muted); font-size: 12px;">… {{ scan_ids|length - 5 }} more</summary>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            {% for sid in scan_ids[5:] %}
+              <a href="/scan/{{ sid }}" style="text-decoration: none;">
+                <span class="pill muted" style="padding: 6px 12px; font-family: var(--font-mono);">{{ sid }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
+    </div>
+
+    {% if report %}
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Signals</div>
+          <div class="kpi-value glow-cyan">{{ report.n_with_signal }}</div>
+          <div class="kpi-delta">of {{ report.n_total }}</div></div>
+        <div class="kpi mag"><div class="kpi-label">Errors</div>
+          <div class="kpi-value">{{ report.n_errored }}</div>
+          <div class="kpi-delta">tickers failed</div></div>
+        <div class="kpi bull"><div class="kpi-label">Duration</div>
+          <div class="kpi-value">{{ report.duration_seconds }}s</div>
+          <div class="kpi-delta">end-to-end</div></div>
+        <div class="kpi yellow"><div class="kpi-label">Coverage</div>
+          <div class="kpi-value">{{ report.n_total }}</div>
+          <div class="kpi-delta">tickers</div></div>
+      </div>
+
+      <div class="card" style="padding: 12px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;"
+           x-data="{ bias: 'any', signalsOnly: false, sort: 'score', minRr: '0',
+                    refresh() { htmx.trigger('#scan-table', 'refresh'); } }">
+        <div class="tabs">
+          <button type="button" class="tab" :class="{ active: !signalsOnly && bias === 'any' }"
+            @click="signalsOnly = false; bias = 'any'; refresh()">All</button>
+          <button type="button" class="tab" :class="{ active: signalsOnly && bias === 'any' }"
+            @click="signalsOnly = true; bias = 'any'; refresh()">Signals</button>
+          <button type="button" class="tab" :class="{ active: bias === 'long' }"
+            @click="signalsOnly = true; bias = 'long'; refresh()">Long</button>
+          <button type="button" class="tab" :class="{ active: bias === 'short' }"
+            @click="signalsOnly = true; bias = 'short'; refresh()">Short</button>
+        </div>
+        <div style="flex: 1;"></div>
+        <span style="font: 700 11px var(--font-mono); color: var(--fg-muted); letter-spacing: .1em; text-transform: uppercase;">Sort</span>
+        <select class="input" x-model="sort" @change="refresh()"
+                style="width: 160px; padding: 6px 28px 6px 10px; font-size: 12px;">
+          <option value="score">Score</option>
+          <option value="rr">R:R</option>
+          <option value="ticker">Ticker</option>
+          <option value="coherence">Coherence</option>
+          <option value="right_edge">Right-edge</option>
+        </select>
+        <select class="input" x-model="minRr" @change="refresh()"
+                style="width: 130px; padding: 6px 28px 6px 10px; font-size: 12px;">
+          <option value="0">Min R:R: any</option>
+          <option value="1">Min R:R: 1.0</option>
+          <option value="2">Min R:R: 2.0</option>
+          <option value="3">Min R:R: 3.0</option>
+        </select>
+
+        <div id="scan-table"
+             class="card dt-card"
+             style="flex-basis: 100%; margin-top: 12px;"
+             hx-get="/scan/{{ current_id }}/table"
+             hx-trigger="load, refresh"
+             hx-vals='js:{ sort: Alpine.$data(this.closest("[x-data]")).sort,
+                           signals_only: Alpine.$data(this.closest("[x-data]")).signalsOnly ? "true" : "false",
+                           bias: Alpine.$data(this.closest("[x-data]")).bias,
+                           min_rr: Alpine.$data(this.closest("[x-data]")).minRr }'
+             hx-swap="innerHTML">
+          <div class="skeleton" style="margin: 12px;"></div>
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

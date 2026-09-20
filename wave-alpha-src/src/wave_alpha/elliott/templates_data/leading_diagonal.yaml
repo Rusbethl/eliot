@@ -1,0 +1,45 @@
+name: leading_diagonal
+direction_alternates: true
+waves: ["1", "2", "3", "4", "5"]
+constraints:
+  - name: wave_3_not_shortest
+    severity: hard
+    expr: "length(W3) >= min(length(W1), length(W5))"
+    rationale: "Motive rule - W3 cannot be the shortest of 1, 3, 5."
+
+  - name: wave_2_max_retrace
+    severity: hard
+    expr: "retrace(W2, W1) <= Decimal('0.99')"
+    rationale: "W2 cannot fully retrace W1; full retrace means there is no W1."
+
+  - name: wave_2_min_retrace
+    severity: hard
+    expr: "retrace(W2, W1) >= Decimal('0.3')"
+    rationale: "LDs need a real W2 retrace. A W2 below 0.3 of W1 is too shallow to be a diagonal corrective; the window is structurally an impulse with a tiny W2, not an LD. This is a fail-fast filter to keep LD out of the top-K on most non-diagonal windows."
+
+  - name: wave_4_overlaps_wave_1
+    severity: hard
+    expr: "overlaps(W4, W1)"
+    rationale: "Classical EW: diagonals MUST show W4 overlap with W1. Without overlap, the window is either an impulse (already validates) or not a 5-wave motive. Promoted to hard during the v1 iteration to keep LD from competing with impulse on the same windows."
+
+  - name: wave_2_deep_retrace
+    severity: soft
+    expr: "retrace(W2, W1) >= Decimal('0.5')"
+    rationale: "LD W2 typically retraces 50%+ of W1 (ED tends shallow)."
+
+  - name: wave_2_not_excessive
+    severity: soft
+    expr: "retrace(W2, W1) <= Decimal('0.9')"
+    rationale: "LD W2 rarely exceeds 90% of W1; deeper is usually a corrective misclassification."
+
+  - name: wave_3_not_extended
+    severity: soft
+    expr: "length(W3) <= Decimal('1.618') * length(W1)"
+    rationale: "LD W3 is compressed vs. impulse W3; heavy extension suggests impulse."
+
+allowed_sub_patterns:
+  "1": ["zigzag", "impulse"]
+  "2": ["zigzag", "flat"]
+  "3": ["zigzag", "impulse"]
+  "4": ["zigzag", "flat"]
+  "5": ["zigzag", "impulse"]

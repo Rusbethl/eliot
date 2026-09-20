@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pill, gloss, popover %}
+{% set active = "settings" %}
+{% block title %}Settings — wave-alpha{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-sub">Stored in <code style="font-family: var(--font-mono); color: var(--cyan);">~/.wave_alpha/config.yaml</code>. ENV vars override file values at runtime.</p>
+    </div>
+  </div>
+
+  <form method="post" action="/settings">
+
+    <div class="card">
+      <div class="card-head">
+        <h3 class="card-title purple">LLM reranker (optional)</h3>
+        {{ pill("disabled by default", "muted") }}
+      </div>
+      <p style="margin: 0 0 14px; color: var(--fg-secondary); font-size: 13px;">
+        The engine is fully deterministic on its own. The LLM only re-ranks the engine's top
+        candidates — it never invents counts.
+      </p>
+      <div class="stack">
+        <div class="field">
+          <label class="field-label" for="api_key">Anthropic API key</label>
+          <input id="api_key" type="password" class="input mono" name="api_key" value="" autocomplete="off"
+                 placeholder="{% if cfg.llm.api_key %}(set — leave blank to keep){% else %}sk-...{% endif %}">
+          <span class="field-help">Required only for live rerank. The CLI also reads <code style="font-family: var(--font-mono); color: var(--cyan);">$ANTHROPIC_API_KEY</code>.</span>
+        </div>
+
+        <div class="row-2">
+          <div class="field">
+            <label class="field-label" for="scan_model">Scan model</label>
+            <input id="scan_model" class="input mono" name="scan_model" value="{{ cfg.llm.scan_model }}">
+            <span class="field-help">Used during bulk scans. Optimized for speed/cost.</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="deep_model">Deep-dive model</label>
+            <input id="deep_model" class="input mono" name="deep_model" value="{{ cfg.llm.deep_model }}">
+            <span class="field-help">Used in the deep-dive view. Higher quality.</span>
+          </div>
+        </div>
+
+        <div class="field" x-data="{ alpha: {{ cfg.llm.alpha }} }">
+          <label class="field-label" for="alpha">
+            {{ gloss("Engine ↔ LLM blend (α)", "α weights the deterministic engine vs the LLM rerank. 1.0 = engine only; 0.0 = LLM only.") }}
+          </label>
+          <div style="margin: -4px 0 6px;">
+            {% call popover("Why our default α = 0.6", anchor="alpha-blend") %}
+              <p class="popover-narrative">α blends the deterministic engine score with the LLM rerank probability: <code>final = α &times; engine + (1 &minus; α) &times; llm</code>. 0.6 is our internal default &mdash; tune toward 1.0 to trust the engine more, toward 0.0 to trust the LLM more. We do not yet have a formal Sharpe sweep.</p>
+            {% endcall %}
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <input id="alpha" type="range" min="0" max="1" step="0.05" name="alpha"
+                   x-model="alpha" class="input" style="flex: 1; padding: 0;">
+            <span class="num glow-cyan" style="font-size: 16px; font-weight: 700; width: 50px;"
+                  x-text="parseFloat(alpha).toFixed(2)">{{ cfg.llm.alpha }}</span>
+          </div>
+          <span class="field-help">
+            final = α × engine + (1 − α) × llm.
+            <strong>α = 1.0</strong> trusts only the engine; <strong>α = 0.0</strong> trusts only the LLM. Recommended 0.6 – 0.7.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3 class="card-title yellow">Storage paths</h3></div>
+      <div class="row-2">
+        <div class="field"><label class="field-label" for="path-cache">OHLCV cache</label>
+          <input id="path-cache" class="input mono" value="~/.wave_alpha/cache.sqlite" disabled></div>
+        <div class="field"><label class="field-label" for="path-llm">LLM cache</label>
+          <input id="path-llm" class="input mono" value="~/.wave_alpha/llm_cache.sqlite" disabled></div>
+        <div class="field"><label class="field-label" for="path-scans">Scan reports</label>
+          <input id="path-scans" class="input mono" value="~/.wave_alpha/scans/" disabled></div>
+        <div class="field"><label class="field-label" for="path-watchlist">Watchlist</label>
+          <input id="path-watchlist" class="input mono" value="~/.wave_alpha/watchlist.yaml" disabled></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+      <a class="btn" href="/settings">Cancel</a>
+      <button class="btn btn-primary" type="submit">Save changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

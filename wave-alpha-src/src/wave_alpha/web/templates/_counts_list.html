@@ -1,0 +1,45 @@
+{% from "_macros.html" import pat, wlabel, pill, popover %}
+
+{% if not ranked %}
+  <p style="margin: 0; color: var(--fg-muted);">No candidates produced for this date.</p>
+{% else %}
+  <div class="stack">
+    {% for rc in ranked %}
+      <div style="padding: 10px 12px; border-radius: var(--radius-sm);
+                  {% if loop.first %}background: rgba(244,114,182,0.05); border-left: 2px solid var(--magenta);
+                   box-shadow: 0 0 16px rgba(244,114,182,0.08) inset;{% endif %}">
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap;">
+          {{ pill(rc.candidate_id, "mag" if loop.first else "muted") }}
+          {{ pat(rc.count.pattern) }}
+          {{ pill("final " + "%.2f"|format(rc.final_score), "cyan") }}
+          {{ pill("engine " + "%.2f"|format(rc.engine_score), "muted") }}
+          {% if rc.llm_prob is not none %}
+            {{ pill("llm " + "%.2f"|format(rc.llm_prob), "purple") }}
+          {% endif %}
+          {% set rank_label = "won" if loop.first else ("was second" if loop.index == 2 else ("was third" if loop.index == 3 else "ranked " ~ loop.index)) %}
+          {% call popover("Why " ~ rc.candidate_id ~ " " ~ rank_label, anchor="enumeration") %}
+            <p class="popover-narrative">{{ rc.candidate_id }} is the {{ rc.count.pattern }} interpretation. Final score = α × engine + (1 &minus; α) × llm, then × coherence multiplier.</p>
+            <table class="popover-data">
+              <tr><th>engine score</th><td class="num">{{ "%.2f"|format(rc.engine_score) }}</td></tr>
+              <tr><th>llm prob</th><td class="num">{% if rc.llm_prob is not none %}{{ "%.2f"|format(rc.llm_prob) }}{% else %}disabled{% endif %}</td></tr>
+              <tr><th>soft violations</th><td>{% if rc.count.soft_violations %}{{ rc.count.soft_violations|length }}{% else %}none{% endif %}</td></tr>
+              <tr class="total"><th>final score</th><td class="num">{{ "%.2f"|format(rc.final_score) }}</td></tr>
+            </table>
+          {% endcall %}
+        </div>
+        {% set narrative = narratives.get(rc.candidate_id) %}
+        {% if narrative %}
+          <p style="margin: 4px 0 0; font-size: 13px; color: var(--fg-secondary);">{{ narrative }}</p>
+        {% endif %}
+        {% if rc.count.soft_violations %}
+          <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+            {% for v in rc.count.soft_violations %}{{ pill("soft: " + v, "warn") }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% if engine_missed %}
+    <p style="margin-top: 10px;">{{ pill("LLM flagged engine_missed — consider expanding template set.", "warn") }}</p>
+  {% endif %}
+{% endif %}

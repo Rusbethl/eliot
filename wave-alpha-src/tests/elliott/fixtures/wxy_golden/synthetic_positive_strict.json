@@ -1,0 +1,8 @@
+{
+  "name": "synthetic_positive_strict",
+  "ticker": "SYNTH",
+  "as_of": "2026-05-15",
+  "bars": "_use_helper_in_test_module_",
+  "expected_top_pattern_at_degree_2": "wxy_anywhere",
+  "expected_subcounts": {"W": "zigzag", "Y": "zigzag"}
+}

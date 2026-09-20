@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pat, wlabel, pill, gloss %}
+{% block title %}{{ ticker }} — wave-alpha{% endblock %}
+
+{% block page_scripts %}
+  <script defer src="/static/vendor/lightweight-charts/lightweight-charts.standalone.production.js?v={{ asset_v }}"></script>
+  <script defer src="/static/deepdive.js?v={{ asset_v }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="card">
+    <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;">
+      <div>
+        <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+          <h1 class="page-title glow-cyan" style="font-family: var(--font-mono); font-size: 30px;">{{ ticker }}</h1>
+          <span style="color: var(--fg-muted); font-size: 13px;">as of {{ as_of }}</span>
+          {% if llm_mode == "live" %}{{ pill("LLM live", "purple") }}
+          {% elif llm_mode == "cached" %}{{ pill("LLM cached", "muted") }}
+          {% else %}{{ pill("LLM disabled", "muted") }}{% endif %}
+        </div>
+      </div>
+      <form method="get" action="/deepdive/{{ ticker }}" style="display: flex; gap: 8px; align-items: center;">
+        <input type="hidden" name="t" value="{{ ticker }}">
+        <input type="date" class="input mono" name="as_of" value="{{ as_of }}" style="width: 160px;">
+        <select class="input" name="llm" style="width: 140px;">
+          <option value="disabled" {% if llm_mode == 'disabled' %}selected{% endif %}>LLM: disabled</option>
+          <option value="cached"   {% if llm_mode == 'cached'   %}selected{% endif %}>LLM: cached</option>
+          <option value="live"     {% if llm_mode == 'live'     %}selected{% endif %}>LLM: live</option>
+        </select>
+        <button class="btn" type="submit">Reload</button>
+      </form>
+    </div>
+    <div hx-get="/deepdive/{{ ticker }}/hero?as_of={{ as_of }}"
+         hx-trigger="load delay:50ms"
+         hx-swap="innerHTML">
+      <div class="skeleton" style="height: 80px; margin-top: 14px;"></div>
+    </div>
+  </div>
+
+  <div class="dd-grid">
+    <div class="card" style="padding: 14px;">
+      <div class="card-head" style="padding: 4px 4px 12px;">
+        <h3 class="card-title">Price &amp; pivots</h3>
+      </div>
+      <div id="chart"
+           hx-get="/deepdive/{{ ticker }}/chart?as_of={{ as_of }}"
+           hx-trigger="load"
+           hx-swap="innerHTML">
+        <div class="skeleton" style="height: 480px;"></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card"
+           hx-get="/deepdive/{{ ticker }}/plan?as_of={{ as_of }}"
+           hx-trigger="load delay:200ms"
+           hx-swap="innerHTML">
+        <div class="card-head"><h3 class="card-title bull">Trade plan</h3></div>
+        <div class="skeleton" style="height: 120px;"></div>
+      </div>
+
+      <div class="card"
+           hx-get="/deepdive/{{ ticker }}/coherence?as_of={{ as_of }}"
+           hx-trigger="load delay:100ms"
+           hx-swap="innerHTML">
+        <div class="card-head">
+          <h3 class="card-title">
+            {{ gloss("Multi-timeframe agreement", "Coherence: how strongly the weekly, daily, and 4-hour timeframes agree on the same wave count.") }}
+          </h3>
+        </div>
+        <div class="skeleton" style="height: 100px;"></div>
+      </div>
+
+      <div class="card"
+           hx-get="/deepdive/{{ ticker }}/right-edge?as_of={{ as_of }}"
+           hx-trigger="load delay:100ms"
+           hx-swap="innerHTML">
+        <div class="card-head">
+          <h3 class="card-title purple">
+            {{ gloss("Right-edge confirmation", "Right-edge: probability that the most recent pivot is real and won't be invalidated by a deeper move against the wave.") }}
+          </h3>
+        </div>
+        <div class="skeleton" style="height: 100px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-2" style="margin-top: 16px;">
+    <div class="card"
+         hx-get="/deepdive/{{ ticker }}/counts?as_of={{ as_of }}&llm={{ llm_mode }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="card-head"><h3 class="card-title mag">Wave counts (top 3)</h3></div>
+      <div class="skeleton" style="height: 200px;"></div>
+    </div>
+
+    <div class="card"
+         hx-get="/deepdive/{{ ticker }}/scenarios?as_of={{ as_of }}"
+         hx-trigger="load delay:200ms"
+         hx-swap="innerHTML">
+      <div class="card-head"><h3 class="card-title">Right-edge scenarios</h3></div>
+      <div class="skeleton" style="height: 120px;"></div>
+    </div>
+  </div>
+
+  <div class="card"
+       style="margin-top: 16px;"
+       hx-get="/deepdive/{{ ticker }}/history"
+       hx-trigger="load delay:300ms"
+       hx-swap="innerHTML">
+    <div class="card-head"><h3 class="card-title yellow">Stability over time</h3></div>
+    <div class="skeleton" style="height: 100px;"></div>
+  </div>
+
+</div>
+{% endblock %}

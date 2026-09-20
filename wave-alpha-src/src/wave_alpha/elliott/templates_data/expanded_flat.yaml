@@ -1,0 +1,16 @@
+name: expanded_flat
+direction_alternates: true
+waves: ["A", "B", "C"]
+constraints:
+  - name: b_exceeds_a_start
+    severity: hard
+    expr: "retrace(WB, WA) > Decimal('1.05')"
+    rationale: "Wave B in an expanded flat exceeds Wave A's origin"
+  - name: c_extends_past_a
+    severity: hard
+    expr: "length(WC) >= length(WA)"
+    rationale: "Wave C exceeds Wave A's extreme in an expanded flat"
+allowed_sub_patterns:
+  "A": ["zigzag", "flat", "contracting_triangle"]
+  "B": ["zigzag", "flat", "contracting_triangle"]
+  "C": ["impulse", "ending_diagonal"]

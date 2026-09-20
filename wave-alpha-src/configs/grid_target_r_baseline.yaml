@@ -1,0 +1,14 @@
+# target_R sweep baseline — fib_extension on the v0.5.9 default
+# rules. Produces a single cell to compare against the 4-cell
+# fixed_R sweep.  Spec: docs/superpowers/specs/2026-05-08-target-r-sweep-design.md.
+axes:
+  - name: target_source
+    levels: [fib_extension]
+
+fixed:
+  direction_modes: [long]
+  entry_trigger: immediate
+  stop_source: atr_multiple
+  min_confidence: 0.45
+  time_stop_mode: degree_based
+  slippage_bps: 5

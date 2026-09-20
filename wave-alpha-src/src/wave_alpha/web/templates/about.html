@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% set active = "about" %}
+{% block title %}How wave-alpha works — wave-alpha{% endblock %}
+
+{% block content %}
+<div class="page about">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">How wave-alpha works</h1>
+      <p class="page-sub">
+        A deterministic Elliott Wave engine with optional LLM rerank. This page
+        documents what the engine does, how each metric is computed, and what it
+        does not claim.
+      </p>
+    </div>
+  </div>
+
+  <div class="about-grid">
+    <aside class="about-toc">
+      <div class="card-head"><h3 class="card-title">On this page</h3></div>
+      <ul>
+        <li><a href="#pipeline">Pipeline overview</a></li>
+        <li><a href="#pivots">Pivots &amp; degrees</a></li>
+        <li><a href="#templates">Wave templates</a></li>
+        <li><a href="#enumeration">Enumeration &amp; scoring</a></li>
+        <li><a href="#coherence">Multi-timeframe coherence</a></li>
+        <li><a href="#right-edge">Right-edge confirmation</a></li>
+        <li><a href="#alpha-blend">LLM rerank &amp; α blend</a></li>
+        <li><a href="#trade-plan">Trade plan derivation</a></li>
+        <li><a href="#lookahead">Lookahead-safety guarantee</a></li>
+        <li><a href="#privacy">Privacy contract</a></li>
+        <li><a href="#what-this-is-not">What this is not</a></li>
+      </ul>
+    </aside>
+
+    <article class="about-body">
+      <section id="pipeline" class="about-section">
+        <h2>Pipeline overview</h2>
+        <p>
+          For each request, we fetch OHLCV bars at three intervals (weekly, daily, 4-hour),
+          run the same enumeration on each, score the resulting wave counts for multi-timeframe
+          agreement, optionally rerank with an LLM, and derive a trade signal from the top count.
+          Every step is deterministic given the same inputs and as-of date.
+        </p>
+        <svg class="diagram" viewBox="0 0 480 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline flow from bars to signal">
+          <defs>
+            <marker id="arr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0 0 L8 4 L0 8 z" fill="#7C8BA3"/>
+            </marker>
+          </defs>
+          <g font-family="-apple-system, system-ui, sans-serif" font-size="11" fill="#C7D2DE">
+            <rect x="6"   y="40" width="78" height="32" rx="6" fill="#0E121C" stroke="#22D3EE" stroke-opacity="0.4"/>
+            <text x="45"  y="60" text-anchor="middle">Bars</text>
+            <rect x="98"  y="40" width="98" height="32" rx="6" fill="#0E121C" stroke="#22D3EE" stroke-opacity="0.4"/>
+            <text x="147" y="60" text-anchor="middle">PointInTimeView</text>
+            <rect x="210" y="40" width="78" height="32" rx="6" fill="#0E121C" stroke="#F472B6" stroke-opacity="0.5"/>
+            <text x="249" y="60" text-anchor="middle">Pivots</text>
+            <rect x="302" y="40" width="86" height="32" rx="6" fill="#0E121C" stroke="#F472B6" stroke-opacity="0.5"/>
+            <text x="345" y="60" text-anchor="middle">Enumerate</text>
+            <rect x="402" y="40" width="72" height="32" rx="6" fill="#0E121C" stroke="#A3E635" stroke-opacity="0.5"/>
+            <text x="438" y="60" text-anchor="middle">Signal</text>
+            <line x1="84"  y1="56" x2="98"  y2="56" stroke="#7C8BA3" marker-end="url(#arr)"/>
+            <line x1="196" y1="56" x2="210" y2="56" stroke="#7C8BA3" marker-end="url(#arr)"/>
+            <line x1="288" y1="56" x2="302" y2="56" stroke="#7C8BA3" marker-end="url(#arr)"/>
+            <line x1="388" y1="56" x2="402" y2="56" stroke="#7C8BA3" marker-end="url(#arr)"/>
+          </g>
+        </svg>
+        <div class="src-cite">Source: <code>src/wave_alpha/pipeline.py:run_analysis</code> · Spec: §5 of <code>2026-05-03-wave-alpha-design.md</code></div>
+      </section>
+
+      <section id="pivots" class="about-section">
+        <h2>Pivots &amp; degrees</h2>
+        <p>
+          A zigzag detector finds turning points in price scaled by Average True Range (ATR),
+          so the same logic works on a $5 stock and a $5,000 one. Pivots are stratified into
+          degrees: degree-0 captures every micro-turn, higher degrees keep only the more
+          significant ones. The engine counts at degree 2 by default — coarse enough to
+          ignore noise, fine enough to see most actionable patterns.
+        </p>
+        <svg class="diagram" viewBox="0 0 480 110" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pivots at three degrees overlaid">
+          <g fill="none" stroke-width="1.6" font-family="-apple-system, system-ui, sans-serif" font-size="10">
+            <polyline points="6,80 40,40 70,70 110,30 150,55 200,20 240,60 290,25 340,65 390,15 440,50 472,30" stroke="#475569"/>
+            <g fill="#22D3EE"><circle cx="40" cy="40" r="3"/><circle cx="110" cy="30" r="3"/><circle cx="200" cy="20" r="3"/><circle cx="290" cy="25" r="3"/><circle cx="390" cy="15" r="3"/></g>
+            <g fill="#F472B6"><circle cx="200" cy="20" r="4"/><circle cx="390" cy="15" r="4"/></g>
+            <g fill="#FB923C"><circle cx="390" cy="15" r="5"/></g>
+            <text x="6"  y="100" fill="#22D3EE">deg 0</text>
+            <text x="64" y="100" fill="#F472B6">deg 1</text>
+            <text x="124" y="100" fill="#FB923C">deg 2 (default)</text>
+          </g>
+        </svg>
+        <div class="src-cite">Source: <code>src/wave_alpha/pivots/</code> · Spec: §6</div>
+      </section>
+
+      <section id="templates" class="about-section">
+        <h2>Wave templates</h2>
+        <p>
+          Patterns are defined in YAML, not code. Each template (impulse, zigzag, flat, expanded
+          flat, contracting triangle, ending diagonal) lists its waves and constraints, marked
+          either <code>hard</code> (rejection) or <code>soft</code> (score penalty). Adding a
+          new pattern means dropping a YAML file in
+          <code>src/wave_alpha/elliott/templates_data/</code> &mdash; no code change required
+          unless a new constraint operator is involved.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/elliott/templates_data/</code> · Spec: §7</div>
+      </section>
+
+      <section id="enumeration" class="about-section">
+        <h2>Enumeration &amp; scoring</h2>
+        <p>
+          For each timeframe, the engine slides every template across the recent pivot stream and
+          records every legal fit. Each candidate is scored on three components: <em>template
+          fit</em> (how cleanly the pivots match the wave skeleton), <em>fib quality</em> (how
+          close wave ratios sit to canonical Fibonacci targets), and <em>recency</em> (how
+          fresh the most recent pivot is). Multiple windows of the same template family
+          deduplicate down to the highest-scoring instance before the global top-K cut, so one
+          template can't crowd out alternates.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/elliott/enumerator.py</code> · Spec: §8</div>
+      </section>
+
+      <section id="coherence" class="about-section">
+        <h2>Multi-timeframe coherence</h2>
+        <p>
+          Coherence asks: do the weekly, daily, and 4-hour timeframes tell the same story? The
+          engine compares the top counts pairwise (W&harr;D, W&harr;4h, D&harr;4h) and produces
+          a multiplier that scales the engine score. Strong agreement amplifies confidence; weak
+          agreement (or missing-timeframe data) leaves the multiplier at 1.0 or below. High
+          coherence means the count is consistent across horizons; it does <em>not</em> mean the
+          count is correct.
+        </p>
+        <svg class="diagram" viewBox="0 0 320 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-timeframe Venn-style overlap">
+          <g font-family="-apple-system, system-ui, sans-serif" font-size="11">
+            <circle cx="120" cy="60" r="48" fill="#22D3EE" fill-opacity="0.18" stroke="#22D3EE" stroke-opacity="0.6"/>
+            <circle cx="170" cy="60" r="48" fill="#F472B6" fill-opacity="0.18" stroke="#F472B6" stroke-opacity="0.6"/>
+            <circle cx="145" cy="100" r="48" fill="#FB923C" fill-opacity="0.18" stroke="#FB923C" stroke-opacity="0.6"/>
+            <text x="80"  y="40"  fill="#22D3EE" text-anchor="middle">Weekly</text>
+            <text x="210" y="40"  fill="#F472B6" text-anchor="middle">Daily</text>
+            <text x="145" y="124" fill="#FB923C" text-anchor="middle">4-hour</text>
+          </g>
+        </svg>
+        <div class="src-cite">Source: <code>src/wave_alpha/coherence/score.py</code> · Spec: §9</div>
+      </section>
+
+      <section id="right-edge" class="about-section">
+        <h2>Right-edge confirmation</h2>
+        <p>
+          The most recent pivot is, by definition, the least confirmed. The right-edge model
+          estimates the probability that this tentative pivot will hold &mdash; that future bars
+          won't push past it and invalidate the count. Three implementations exist: a hand-coded
+          heuristic, a heuristic plus per-degree Platt calibration, and a full logistic regression
+          with a feature-order-stable JSON artifact. The active model is selected per
+          configuration; <code>auto</code> prefers logistic, falls back to calibrated heuristic,
+          then heuristic.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/right_edge/</code> · Spec: §10</div>
+      </section>
+
+      <section id="alpha-blend" class="about-section">
+        <h2>LLM rerank &amp; α blend</h2>
+        <p>
+          The LLM is strictly optional. When enabled, it reranks the engine's top candidates
+          &mdash; it never invents counts. The final score blends both signals as
+          <code>final = α &times; engine + (1 &minus; α) &times; llm</code>, then multiplies by
+          the coherence multiplier. The default α = 0.6 leans on the engine; tune toward 1.0
+          to trust the engine fully, toward 0.0 to trust the LLM fully. There is no formal
+          Sharpe sweep yet, so the default is internal preference rather than a fitted optimum.
+        </p>
+        <p>
+          Three modes: <code>disabled</code> (no API key needed, fully deterministic;
+          mandatory for backtest comparisons), <code>cached</code> (replays prior responses
+          from the local SQLite cache, raises on miss), <code>live</code> (real API calls,
+          writes to cache).
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/llm/</code> · Spec: §11</div>
+      </section>
+
+      <section id="trade-plan" class="about-section">
+        <h2>Trade plan derivation</h2>
+        <p>
+          For the top candidate that meets a minimum-confidence threshold, the engine derives a
+          trade plan: <em>entry</em> at the close of the most recent confirming pivot,
+          <em>stop</em> at the prior wave's structural extreme (with an ATR cushion), and
+          <em>target</em> from a Fibonacci extension of the active count by default. R:R is
+          <code>(target &minus; entry) &divide; (entry &minus; stop)</code>. Switch the target
+          source to <code>fixed_R</code> in Settings to use a fixed multiple of the
+          entry-to-stop distance instead.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/trades/derive.py</code> · Spec: §12</div>
+      </section>
+
+      <section id="lookahead" class="about-section">
+        <h2>Lookahead-safety guarantee</h2>
+        <p>
+          Every analysis runs through <code>PointInTimeView</code>, which hard-asserts that no
+          bar with a timestamp after the as-of date is reachable. The backtest harness, the live
+          pipeline, and the right-edge feature extractor all flow through it. A synthetic-leak
+          unit test (<code>tests/backtest/test_lookahead_guard.py</code>) plants a deliberate
+          violation to verify the assertion fires &mdash; if you ever see it pass with a leaked
+          bar, the safety net has a hole.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/data/point_in_time.py:PointInTimeView</code> · Spec: §13</div>
+      </section>
+
+      <section id="privacy" class="about-section">
+        <h2>Privacy contract</h2>
+        <p>
+          When the LLM is enabled, the only payload sent upstream is: ticker symbol, pivot
+          timestamps and prices, candidate count structures, and coherence metrics. No raw OHLCV
+          bars, no API keys (the key is set on the client, never serialised in the payload), no
+          account information. This contract lives in <code>llm/prompts.py</code> and
+          <code>llm/candidates.py:serialize_candidate_set</code>. Tampering with either should
+          require a paired update to this section.
+        </p>
+        <div class="src-cite">Source: <code>src/wave_alpha/llm/prompts.py</code>, <code>llm/candidates.py</code> · Spec: §14</div>
+      </section>
+
+      <section id="what-this-is-not" class="about-section">
+        <h2>What this is not</h2>
+        <ul>
+          <li>This is <strong>not financial advice</strong>. The engine produces deterministic candidate counts and signals; whether to act on them is your judgment.</li>
+          <li>This is <strong>not a real-time backtest of itself</strong>. Coherence and right-edge are computed per request, not validated per request.</li>
+          <li>The engine <strong>can and does miss patterns</strong>. The template set in <code>templates_data/</code> is finite; price action that doesn't fit a template gets no candidates.</li>
+          <li><strong>High coherence does not mean the count is correct.</strong> It means the engine reached the same count across timeframes &mdash; more likely to be correct, not certain.</li>
+          <li>LLM rerank is heuristic. With α = 0.6 the engine still dominates; setting α = 0.0 makes the LLM responsible for most of the ranking, which is not validated.</li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</div>
+{% endblock %}

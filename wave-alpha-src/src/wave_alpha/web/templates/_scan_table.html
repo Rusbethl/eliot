@@ -1,0 +1,75 @@
+{% from "_macros.html" import pat, wlabel, pill, tri, popover %}
+
+{% if not rows %}
+  <p style="padding: 24px; text-align: center; color: var(--fg-muted); margin: 0;">
+    No rows match these filters.
+  </p>
+{% else %}
+<table class="dt">
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th>Pattern</th>
+      <th>Bias</th>
+      <th style="text-align:right;">Score
+        {% call popover("How to read Score", anchor="enumeration") %}
+          <p class="popover-narrative">Final score for the row's top candidate after the coherence multiplier and (optional) LLM blend. Higher = stronger fit. Pair with coherence and right-edge before acting.</p>
+        {% endcall %}
+      </th>
+      <th>Coherence
+        {% call popover("How to read Coherence", anchor="coherence") %}
+          <p class="popover-narrative">Multi-timeframe agreement on the top count. ✓ = strong, ⚠ = weak, dot = missing timeframe data. The numeric value is the multiplier applied to the engine score.</p>
+        {% endcall %}
+      </th>
+      <th style="text-align:right;">R:R
+        {% call popover("How to read R:R", anchor="trade-plan") %}
+          <p class="popover-narrative">Reward&#58;risk for the row's trade signal. Targets default to <code>fib_extension</code>; rows without a valid signal show "—".</p>
+        {% endcall %}
+      </th>
+      <th>Entry / Stop / Target</th>
+      <th>Right-edge
+        {% call popover("How to read Right-edge", anchor="right-edge") %}
+          <p class="popover-narrative">Probability the most recent pivot is real and won't be invalidated by a deeper move against it. Trained per degree on real pivots from 2015&ndash;2024. Open the row's deep-dive to see the active model, degree, and calibration.</p>
+        {% endcall %}
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+      <tr {% if r.has_error %}style="opacity:0.5;"{% endif %}>
+        <td class="tk">
+          <a href="/deepdive/{{ r.ticker }}?as_of={{ r.as_of.isoformat() }}">{{ r.ticker }}</a>
+        </td>
+        <td>{{ pat(r.top_pattern) }}</td>
+        <td>
+          {% if r.direction == "up" %}{{ pill("LONG", "bull", dot=true) }}
+          {% elif r.direction == "down" %}{{ pill("SHORT", "bear", dot=true) }}
+          {% else %}{{ pill("—", "muted") }}{% endif %}
+        </td>
+        <td class="num" style="text-align:right;">
+          {% if r.top_score is not none %}
+            <span class="scorebar"><span>{{ "%.2f"|format(r.top_score) }}</span><span class="bar"><span style="width: {{ (r.top_score * 100)|round|int }}%"></span></span></span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if r.coherence is not none %}<span class="num">{{ "%.2f"|format(r.coherence) }}</span>{% else %}—{% endif %}
+        </td>
+        <td class="num r-pos" style="text-align:right;">
+          {{ "%.2f"|format(r.signal_rr|float) if r.signal_rr is not none else "—" }}
+        </td>
+        <td class="num">
+          {% if r.signal_entry %}<span style="color: var(--fg-muted);">{{ r.signal_entry }}</span> /
+            <span style="color: var(--bear);">{{ r.signal_stop }}</span> /
+            <span style="color: var(--bull);">{{ r.signal_target }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="num">
+          {% if r.right_edge_proba is not none %}
+            <span style="color: var(--purple);">{{ "%.2f"|format(r.right_edge_proba) }}</span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

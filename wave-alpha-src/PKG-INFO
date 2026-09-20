@@ -1,0 +1,402 @@
+Metadata-Version: 2.4
+Name: wave-alpha
+Version: 0.14.3
+Summary: Local-first Elliott Wave analysis for swing traders
+Project-URL: Homepage, https://github.com/chen-star/wave-alpha
+Project-URL: Repository, https://github.com/chen-star/wave-alpha
+Project-URL: Issues, https://github.com/chen-star/wave-alpha/issues
+Project-URL: Changelog, https://github.com/chen-star/wave-alpha/blob/main/CHANGELOG.md
+Author: Alex Chen
+License-Expression: MIT
+License-File: LICENSE
+Keywords: backtest,elliott-wave,finance,stocks,swing-trading,technical-analysis,trading
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Requires-Dist: loguru>=0.7
+Requires-Dist: pandas>=2.2
+Requires-Dist: pydantic>=2.6
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: sqlmodel>=0.0.16
+Requires-Dist: typer[all]>=0.12
+Requires-Dist: yfinance>=0.2.40
+Provides-Extra: dev
+Requires-Dist: factory-boy>=3.3; extra == 'dev'
+Requires-Dist: pytest-cov>=5; extra == 'dev'
+Requires-Dist: pytest>=8; extra == 'dev'
+Requires-Dist: ruff>=0.4; extra == 'dev'
+Provides-Extra: llm
+Requires-Dist: anthropic>=0.39; extra == 'llm'
+Provides-Extra: ui
+Requires-Dist: fastapi>=0.110; extra == 'ui'
+Requires-Dist: jinja2>=3.1; extra == 'ui'
+Requires-Dist: python-multipart>=0.0.9; extra == 'ui'
+Requires-Dist: uvicorn[standard]>=0.27; extra == 'ui'
+Description-Content-Type: text/markdown
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+  <img src="docs/assets/logo-light.svg" alt="wave-alpha — Elliott Wave engine for swing traders" width="520">
+</picture>
+
+**Local-first Elliott Wave analysis for swing traders.**
+Deterministic rule engine · multi-timeframe coherence · optional LLM reranking · leak-free backtests.
+
+[![PyPI version](https://img.shields.io/pypi/v/wave-alpha.svg?logo=pypi&logoColor=white&color=3775a9)](https://pypi.org/project/wave-alpha/)
+[![Downloads](https://static.pepy.tech/badge/wave-alpha)](https://pepy.tech/project/wave-alpha)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776ab.svg?logo=python&logoColor=white)](https://www.python.org)
+[![uv](https://img.shields.io/badge/managed%20with-uv-6366f1.svg)](https://docs.astral.sh/uv/)
+[![Ruff](https://img.shields.io/badge/lint-ruff-d7ff64.svg)](https://docs.astral.sh/ruff/)
+[![Pydantic v2](https://img.shields.io/badge/pydantic-v2-e92063.svg)](https://docs.pydantic.dev)
+[![Local-first](https://img.shields.io/badge/local--first-✓-10b981.svg)](#why-wave-alpha)
+[![BYO key](https://img.shields.io/badge/BYO%20Anthropic%20key-optional-64748b.svg)](#llm-reranking-optional)
+
+</div>
+
+---
+
+## Why wave-alpha
+
+Existing "auto Elliott" tools are either dressed-up ZigZag indicators, institutional-priced terminals, or cloud-only SaaS. None of them give swing traders all of:
+
+- **Rule-validated counts** with calibrated alternates — not a single confident-but-fragile answer.
+- **Multi-timeframe coherence** (weekly + daily + 4h) as a first-class scoring input.
+- **A trade-signal contract** — entry, stop, target, R-multiple — derived directly from the count.
+- **Honest backtests** that enforce lookahead at every fetch site.
+- **Local-first, BYO-key, no telemetry.** Your watchlist and bars stay on your disk.
+
+> [!NOTE]
+> The LLM is a strictly optional **reranker and narrator** — it never counts waves on its own. The deterministic engine is always the source of truth.
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [CLI at a glance](#cli-at-a-glance)
+- [Web UI](#web-ui)
+- [Watchlist & scan](#watchlist--scan)
+- [History snapshots](#history-snapshots)
+- [LLM reranking (optional)](#llm-reranking-optional)
+- [Backtest harness](#backtest-harness)
+- [How it works](#how-it-works)
+- [Right-edge models](#right-edge-models)
+- [Persistence](#persistence)
+- [Development](#development)
+- [Disclaimer](#disclaimer)
+- [License](#license)
+
+## What it does
+
+`wave-alpha` covers the full swing-trader workflow — from raw bars to a ranked thesis to a backtest receipt — organized around six capabilities:
+
+| Capability | Summary | Learn more |
+|------------|---------|------------|
+| 🌊 Wave detection | Rule-validated Elliott counts with calibrated alternates and multi-timeframe coherence. | [How it works](#how-it-works) |
+| 🎯 Trade-ready signals | Entry, stop, target, and R-multiple derived directly from the top count. | [Quick start](#quick-start) |
+| 📋 Watchlist & scanning | Persistent watchlist, multi-ticker scans, and a self-refreshing OHLCV cache. | [Watchlist & scan](#watchlist--scan) |
+| 📈 History & stability | Per-ticker snapshots and a stability badge that tracks how a thesis holds up over time. | [History snapshots](#history-snapshots) |
+| ✅ Honest backtests | Three-layer harness with hard-enforced lookahead safety. | [Backtest harness](#backtest-harness) |
+| 🤖 Optional LLM rerank | BYO Anthropic key for reranking and narration; engine never depends on it. | [LLM reranking](#llm-reranking-optional) |
+
+### Wave detection
+
+- **Pattern library as data** — six templates (`impulse`, `zigzag`, `flat`, `expanded_flat`, `contracting_triangle`, `ending_diagonal`) defined in YAML with `hard` / `soft` constraints. Add a pattern by dropping a file — no code change.
+- **Multi-degree ATR-scaled pivots** with deduplicated top-K candidates per timeframe.
+- **Multi-timeframe coherence** — weekly + daily + 4h read against each other; the coherence multiplier folds into final ranking.
+- **Calibrated alternates** ranked by `final = coh × (α · engine + (1−α) · llm_prob)`, never a single confident answer.
+
+### Trade-ready signals
+
+- **Entry / stop / target / R-multiple** derived from the count's structural pivots.
+- **Right-edge confirmation models** — `heuristic`, `calibrated_heuristic`, or trained `logistic` — with paired-bootstrap promotion gating.
+- **Configurable target source** — `fib_extension` (default) or `fixed_R`.
+
+### Watchlist & multi-ticker scanning
+
+- **Watchlist** with imports from CSV or TradingView text format.
+- **Scan** any list of tickers with one command; reports persist to `~/.wave_alpha/scans/` for instant dashboard reload.
+- **OHLCV cache** auto-refetches a stale tail, so daily cron runs always pull fresh bars without re-downloading history.
+
+### History & stability tracking
+
+- **Snapshot per analysis** — every `analyze` call records the top counts, signals, and coherence to `~/.wave_alpha/history.sqlite`.
+- **Stability badge** highlights when the top count's identity persists across runs — separates transient signals from a maturing thesis.
+- Best-effort writes that never raise, so corrupted state can't interrupt analysis output.
+
+### Honest backtest harness
+
+- **Three layers** — count direction hit-rate, per-degree pivot Brier score, and full trade simulation (hit rate, expectancy, profit factor, max drawdown in R-units).
+- **Lookahead is hard-enforced** by `PointInTimeView` at every fetch site, with a synthetic-leak unit test that plants a violation and verifies the assertion fires.
+- **Grid search** to sweep rule parameters across the curated universe.
+
+### Interfaces
+
+- **CLI** — `analyze`, `scan`, `watchlist`, `backtest`, `train`, `ui`, `config` ([command reference](#cli-at-a-glance)).
+- **Local web UI** with TradingView Lightweight Charts (vendored, MIT) — deep-dive page, scan dashboard, watchlist manager, count-history strip. **Zero CDN runtime dependencies.**
+
+### Optional: LLM reranking
+
+- **BYO Anthropic key** — the engine is fully usable without one.
+- **Reranker only** — the LLM never counts waves; it adjusts ranking and narrates the top thesis.
+- **Strict privacy contract** — pivots and candidate structures only; no bars, no watchlist, no key in payload.
+
+## Prerequisites
+
+| Requirement | Why |
+|------------|-----|
+| **Python 3.11+** | Pinned in `.python-version`; required by the engine. |
+| **[`uv`](https://docs.astral.sh/uv/)** | Project manager — every command runs as `uv run …`. |
+| **Anthropic API key** *(optional)* | Only needed for `--llm-mode live`; requires the `llm` extra (`wave-alpha[llm]`). The engine is fully usable without it. |
+
+> [!IMPORTANT]
+> All commands go through `uv` — **do not activate the venv manually.** `uv run` resolves the right interpreter and extras for you.
+
+## Installation
+
+### From PyPI (most users)
+
+```bash
+# Lean install (deterministic engine + CLI)
+uv pip install wave-alpha
+
+# With the local web UI
+uv pip install "wave-alpha[ui]"
+
+# With the optional LLM reranker (BYO Anthropic key)
+uv pip install "wave-alpha[ui,llm]"
+```
+
+The LLM reranker is opt-in — install the `llm` extra to enable `--llm-mode live` or `cached`. Without it, the deterministic engine works exactly the same.
+
+### Develop from source
+
+```bash
+git clone https://github.com/chen-star/wave-alpha.git
+cd wave-alpha
+
+# Engine + CLI only (most contributors start here)
+uv sync --extra dev
+
+# Add the web UI
+uv sync --extra dev --extra ui
+
+# Add the LLM reranker
+uv sync --extra dev --extra ui --extra llm
+```
+
+Verify the install:
+
+```bash
+uv run wave-alpha version
+```
+
+## Quick start
+
+Run a one-off analysis on a ticker — no API key, no cloud, no account:
+
+```bash
+# Today
+uv run wave-alpha analyze AAPL
+
+# Or rewind to a specific cutoff (lookahead-safe)
+uv run wave-alpha analyze AAPL --as-of 2024-12-31
+
+# JSON output for scripting
+uv run wave-alpha analyze AAPL --json | jq .
+```
+
+You'll see the top-3 ranked counts, a coherence score, and any derived trade signals (entry / stop / target / R-multiple). Each run also writes a snapshot to the local history database — see [History snapshots](#history-snapshots).
+
+## CLI at a glance
+
+| Command | Purpose |
+|---------|---------|
+| `wave-alpha analyze TICKER` | Run analysis for a single ticker, optionally `--as-of YYYY-MM-DD`, `--json`, `--llm-mode`. |
+| `wave-alpha scan` | Scan watchlist (or `--symbols A,B,C`) and persist a report. |
+| `wave-alpha ui` | Launch the local web UI (binds to 127.0.0.1, picks a free port in 8765–8775). |
+| `wave-alpha watchlist add\|rm\|ls\|import` | Manage saved tickers. |
+| `wave-alpha config show\|set` | View or change config (API key, model, alpha). |
+| `wave-alpha backtest count\|pivot\|trade\|grid` | Walk-forward backtest harness across three layers + grid search. |
+| `wave-alpha train right-edge\|calibrated-heuristic` | Train and gate right-edge confirmation models. |
+| `wave-alpha version` | Print the installed version. |
+
+Every command supports `--help`.
+
+## Web UI
+
+```bash
+uv sync --extra ui
+uv run wave-alpha ui          # binds to 127.0.0.1 on first free port in 8765–8775
+```
+
+Then open:
+
+| Page | URL |
+|------|-----|
+| Single-ticker deep-dive | `http://127.0.0.1:8765/deepdive/SPY` |
+| Scan dashboard | `http://127.0.0.1:8765/scan` |
+| Watchlist | `http://127.0.0.1:8765/watchlist` |
+| Settings (paste API key here) | `http://127.0.0.1:8765/settings` |
+
+The deep-dive page composes a chart with pivot overlays, the multi-TF coherence row, the top-3 counts with optional LLM narrative, an auto-derived trade plan, right-edge alternates, and a count-history strip.
+
+## Watchlist & scan
+
+```bash
+uv run wave-alpha watchlist add AAPL
+uv run wave-alpha watchlist add MSFT
+uv run wave-alpha watchlist import portfolio.csv --format csv
+uv run wave-alpha watchlist import tradingview.txt --format tv-txt
+
+# Scan all watchlist tickers (LLM disabled by default — no API cost)
+uv run wave-alpha scan
+
+# Ad-hoc list with a specific cutoff
+uv run wave-alpha scan --symbols AAPL,MSFT,NVDA --as-of 2026-05-01
+```
+
+Reports persist as JSON to `~/.wave_alpha/scans/<scan_id>.json` so the dashboard reloads instantly without re-running.
+
+## History snapshots
+
+Every `analyze` invocation writes a snapshot of the top counts, coherence, and trade signal into `~/.wave_alpha/history.sqlite`. The web UI surfaces a per-ticker history strip and a **stability badge** that highlights when the top count's identity persists across runs — useful for separating transient signals from a maturing thesis.
+
+The write is best-effort and never raises, so a corrupted DB or full disk will not interrupt analysis output.
+
+## LLM reranking (optional)
+
+`wave-alpha` can rerank the engine's candidate counts and narrate them using an Anthropic API key (BYO).
+
+```bash
+# One-time setup
+uv run wave-alpha config set api_key sk-...
+
+# Live API; responses cached to ~/.wave_alpha/llm_cache.sqlite
+uv run wave-alpha analyze AAPL --llm-mode live
+
+# Reproducible — raises on cache miss, no key required
+uv run wave-alpha analyze AAPL --llm-mode cached
+
+# Engine-only baseline (default; mandatory for backtest comparisons)
+uv run wave-alpha analyze AAPL --llm-mode disabled
+
+# Tune the engine/LLM blend
+uv run wave-alpha analyze AAPL --llm-mode live --alpha 0.6
+```
+
+Final ranking formula: `final = coh_multiplier × (alpha × engine_score + (1 − alpha) × llm_prob)`.
+
+> [!IMPORTANT]
+> **Privacy contract.** When the LLM is enabled, the only payload sent upstream is: ticker symbol, pivot timestamps and prices, candidate count structures, and coherence metrics. **No bars. No watchlist. No API key in the payload.** Nothing else.
+
+## Backtest harness
+
+Honest accuracy starts with a leak-free backtest. Lookahead is hard-enforced by `PointInTimeView` at every fetch site, with a synthetic-leak unit test that plants a violation and verifies the assertion fires.
+
+```bash
+# Count layer — top-1 / top-3 forward direction hit rate
+uv run wave-alpha backtest count \
+  --universe data/universe_curated.txt \
+  --start 2020-01-01 --end 2024-12-31 \
+  --step 5 --out reports/count.md
+
+# Pivot layer — per-degree confirmation rate + Brier score
+uv run wave-alpha backtest pivot \
+  --universe data/universe_curated.txt \
+  --start 2020-01-01 --end 2024-12-31 \
+  --out reports/pivot.md
+
+# Trade layer — hit rate, avg R, expectancy, profit factor, max drawdown
+uv run wave-alpha backtest trade \
+  --universe data/universe_curated.txt \
+  --start 2020-01-01 --end 2024-12-31 \
+  --rules my-rules.yaml \
+  --out reports/trade.md \
+  --json reports/trade.json \
+  --trades-csv reports/trades.csv
+```
+
+All three layers run `--llm-mode disabled` by construction — headline numbers are reproducible without an API key. The bundled `data/universe_curated.txt` ships 50 tickers across sectors and vol regimes; pass your own with `--universe my-list.txt`.
+
+> [!WARNING]
+> The 4h timeframe is resampled from yfinance's 1h data, capped at ~730 days of history. Backtests reaching back further degrade gracefully to 2-timeframe coherence (weekly + daily) and emit a startup warning. The trade-layer report's `4h coverage` line and the `tf_count` column in the CSV ledger let you slice ablations on this dimension.
+
+## How it works
+
+```
+OHLCV bars (weekly / daily / 4h)
+  → PointInTimeView(bars, as_of)              # lookahead-safety boundary
+  → detect_multi_degree (ATR-scaled zigzag)   # pivots at degrees 0..N
+  → enumerate_counts(pivots)                  # YAML templates + fib + recency → top-K
+  → three_way coherence(W, D, 4h)             # multiplier on engine_score
+  → [optional] LLM rerank                     # blended via blend_scores(alpha, …)
+  → derive_signal(top counts)                 # entry / stop / target / RR
+```
+
+Every consumer (CLI, web, scan) tolerates partial results — `pipeline.run_analysis` always returns an `AnalyzeResult`, even with empty bar series.
+
+For full design rationale see [`docs/superpowers/specs/2026-05-03-wave-alpha-design.md`](docs/superpowers/specs/2026-05-03-wave-alpha-design.md).
+
+## Right-edge models
+
+Three implementations of the `ConfirmationModel` protocol — selected via `RightEdgeConfig.kind`:
+
+| Kind | What it is | Artifact |
+|------|------------|----------|
+| `heuristic` | Hand-coded weighted sum | none |
+| `calibrated_heuristic` | Heuristic + per-degree Platt scalers | JSON |
+| `logistic` | Full logistic regression with stable feature order | JSON |
+
+Train artifacts via `wave-alpha train right-edge --end 2024-12-31 [--with-fib-features] [--write]`. Promotion is gated by paired bootstrap on Brier score and per-degree ECE; only `PROMOTE` / `PROMOTE_CALIBRATION` verdicts write without `--force`.
+
+## Persistence
+
+All user-facing state lives under `~/.wave_alpha/`:
+
+| Path | Purpose |
+|------|---------|
+| `config.yaml` | API key, model, prefs |
+| `cache.sqlite` | OHLCV bar cache |
+| `llm_cache.sqlite` | LLM response cache |
+| `history.sqlite` | Per-ticker snapshot history |
+| `watchlist.json` | Saved tickers |
+| `scans/<scan_id>.json` | Persisted scan reports |
+
+## Development
+
+```bash
+uv sync --extra dev
+uv run pytest                                    # full test suite
+uv run pytest tests/elliott -k impulse           # filter by folder + name
+uv run pytest tests/test_pipeline.py::test_x -x  # single test, fail fast
+uv run ruff check .                              # lint
+uv run ruff format .                             # format
+```
+
+Pattern definitions live in [`src/wave_alpha/elliott/templates_data/*.yaml`](src/wave_alpha/elliott/templates_data/) — each lists `waves` and `constraints` with `severity: hard | soft`. Adding a pattern is a YAML drop-in (force-included in the wheel via `pyproject.toml`); no code change is needed unless new constraint operators are introduced.
+
+## Disclaimer
+
+**This software is for educational and research use only. It is not financial advice.**
+See [`DISCLAIMER.md`](DISCLAIMER.md) for the full text. By using `wave-alpha` you accept that
+trading decisions are solely your responsibility.
+
+A short banner is shown on first CLI invocation. To suppress it (e.g. in CI), set
+`WAVE_ALPHA_NO_DISCLAIMER=1`.
+
+## License
+
+Released under the [MIT License](LICENSE).

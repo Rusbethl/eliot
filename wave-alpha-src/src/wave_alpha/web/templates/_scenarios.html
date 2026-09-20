@@ -1,0 +1,18 @@
+{% from "_macros.html" import pat, pill %}
+
+{% if not alternates %}
+  <p style="margin: 0; color: var(--fg-muted);">No alternate counts at this date.</p>
+{% else %}
+  <div class="stack">
+    {% for rc in alternates %}
+      <div style="padding: 8px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        {{ pill(rc.candidate_id, "muted") }}
+        {{ pat(rc.count.pattern) }}
+        {{ pill("final " + "%.2f"|format(rc.final_score), "muted") }}
+        {% if rc.count.pivots %}
+          {{ pill("last pivot " + (rc.count.pivots[-1].price|string), "muted") }}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

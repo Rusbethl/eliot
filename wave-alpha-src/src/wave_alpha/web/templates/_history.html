@@ -1,0 +1,64 @@
+{% from "_macros.html" import pat, wlabel, pill %}
+
+{% if not snapshots %}
+  <p style="margin: 0; color: var(--fg-muted);">No snapshots yet. The first analysis will start the timeline.</p>
+{% else %}
+  {% if badge %}
+    {{ pill("stable " + (badge.streak|string) + " day" + ("s" if badge.streak != 1 else ""), "yellow") }}
+    {% if badge.streak != badge.matches_in_window %}
+      <span style="margin-left: 8px; font-size: 12px; color: var(--fg-muted);">
+        ({{ badge.matches_in_window }} of last {{ badge.window }})
+      </span>
+    {% endif %}
+    {% if badge.last_changed_on %}
+      <span style="margin-left: 8px; font-size: 12px; color: var(--fg-muted);">
+        last changed {{ badge.last_changed_on }}
+      </span>
+    {% endif %}
+  {% endif %}
+  {% if outcome_badge %}
+    <div style="margin-top: 6px; font-size: 12px; color: var(--fg-muted);">
+      Outcomes:
+      <strong style="color: var(--fg-secondary);">{{ outcome_badge.target_count }} of {{ outcome_badge.resolved_count }} resolved{% if outcome_badge.resolved_count > 0 %} ({{ "%.0f"|format(outcome_badge.hit_rate * 100) }}%){% endif %} hit target</strong>
+      &middot; avg <span style="color: {% if outcome_badge.avg_R >= 0 %}var(--bull){% else %}var(--bear){% endif %};">{{ "%+.1f"|format(outcome_badge.avg_R) }}R</span>
+      {% if outcome_badge.in_flight_count > 0 %}
+        &middot; {{ outcome_badge.in_flight_count }} still in flight
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div style="margin-top: 12px; font: 11px var(--font-mono);">
+    {% for s in snapshots %}
+      <div style="display: grid; grid-template-columns: 100px auto 30px 60px 1fr auto; gap: 12px;
+                  padding: 6px 8px; align-items: center;
+                  {% if loop.first %}background: rgba(250,204,21,0.05); border-left: 2px solid var(--yellow); border-radius: var(--radius-sm);{% endif %}">
+        <span style="color: var(--fg-muted);">{{ s.as_of }}</span>
+        {{ pat(s.top_3[0].pattern) }}
+        {{ wlabel(s.top_3[0].last_pivot_label) }}
+        <span style="{% if loop.first %}color: var(--cyan);{% endif %}">{{ "%.2f"|format(s.top_3[0].final_score) }}</span>
+        {% if s.signal %}
+          <span style="color: var(--bull);">RR {{ "%.1f"|format(s.signal.rr) }}</span>
+        {% else %}<span></span>{% endif %}
+        <span class="outcome-chip outcome-chip--{{ s.outcome.status if s.outcome else 'none' }}">
+          {% if s.outcome %}
+            {% if s.outcome.status == "target" %}
+              ✓ {{ "%+.1f"|format(s.outcome.realized_R) }}R ({{ s.outcome.bars_held }} bars)
+            {% elif s.outcome.status == "stop" %}
+              ✗ {{ "%+.1f"|format(s.outcome.realized_R) }}R ({{ s.outcome.bars_held }} bars)
+            {% elif s.outcome.status == "time_stop" %}
+              ⊘ {{ "%+.1f"|format(s.outcome.realized_R) }}R ({{ s.outcome.bars_held }} bars)
+            {% elif s.outcome.status == "pending" %}
+              ⊙ {{ "%+.1f"|format(s.outcome.unrealized_R) }}R
+              · day {{ s.outcome.bars_elapsed }}/{{ s.signal.max_holding_bars if s.signal else '?' }}
+              · peak {{ "%+.1f"|format(s.outcome.mfe_R) }}R
+            {% endif %}
+          {% elif not s.signal %}
+            — (no signal)
+          {% else %}
+            — (resolving)
+          {% endif %}
+        </span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

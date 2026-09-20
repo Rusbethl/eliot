@@ -1,0 +1,22 @@
+name: ending_diagonal
+direction_alternates: true
+waves: ["1", "2", "3", "4", "5"]
+constraints:
+  - name: wave_4_overlaps_wave_1
+    severity: soft
+    expr: "overlaps(W4, W1)"
+    rationale: "Wave 4 SHOULD overlap Wave 1 in an ending diagonal"
+  - name: wave_3_not_shortest
+    severity: hard
+    expr: "length(W3) >= min(length(W1), length(W5))"
+    rationale: "Wave 3 still cannot be the shortest"
+  - name: wave_2_shallow_retrace_preferred
+    severity: soft
+    expr: "retrace(W2, W1) < Decimal('0.6')"
+    rationale: "ED W2 typically retraces 30-60% of W1; deeper retraces are more characteristic of a leading diagonal, so penalize ED on deep-W2 windows."
+allowed_sub_patterns:
+  "1": ["zigzag"]
+  "2": ["zigzag", "flat"]
+  "3": ["zigzag"]
+  "4": ["zigzag", "flat"]
+  "5": ["zigzag"]

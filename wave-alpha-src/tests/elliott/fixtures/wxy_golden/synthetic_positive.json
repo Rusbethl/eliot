@@ -1,0 +1,8 @@
+{
+  "name": "synthetic_positive",
+  "ticker": "SYNTH",
+  "as_of": "2026-05-15",
+  "bars": "_use_helper_in_test_module_",
+  "expected_top_pattern_at_degree_2": "primitive",
+  "expected_subcounts": {}
+}

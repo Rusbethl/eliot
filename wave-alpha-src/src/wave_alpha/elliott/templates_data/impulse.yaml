@@ -1,0 +1,30 @@
+name: impulse
+direction_alternates: true
+waves: ["1", "2", "3", "4", "5"]
+constraints:
+  - name: wave_2_max_retrace
+    severity: hard
+    expr: "retrace(W2, W1) <= 1.0"
+    rationale: "Wave 2 cannot retrace more than 100% of Wave 1"
+  - name: wave_3_not_shortest
+    severity: hard
+    expr: "length(W3) >= min(length(W1), length(W5))"
+    rationale: "Wave 3 cannot be the shortest of waves 1, 3, 5"
+  - name: wave_4_no_overlap
+    severity: hard
+    expr: "not overlaps(W4, W1)"
+    rationale: "Wave 4 cannot overlap Wave 1 territory"
+  - name: wave_2_typical_retrace
+    severity: soft
+    expr: "Decimal('0.5') <= retrace(W2, W1) <= Decimal('0.786')"
+    rationale: "Wave 2 typically retraces 50-78.6 percent of Wave 1"
+  - name: wave_3_extension
+    severity: soft
+    expr: "length(W3) >= Decimal('1.618') * length(W1)"
+    rationale: "Wave 3 typically extends 1.618x Wave 1 or more"
+allowed_sub_patterns:
+  "1": ["impulse", "leading_diagonal"]
+  "2": ["zigzag", "flat", "expanded_flat", "contracting_triangle"]
+  "3": ["impulse"]
+  "4": ["zigzag", "flat", "expanded_flat", "contracting_triangle"]
+  "5": ["impulse", "ending_diagonal"]

@@ -1,0 +1,16 @@
+# Trade-layer config for the 2026-05-08 EBT refit backtest.
+# Purpose: collect per-degree trade outcomes from the v0.5.10
+# multi-degree pipeline so degrees 1 and 3 can be empirically fit.
+# Spec: docs/superpowers/specs/2026-05-08-ebt-refit-1-and-3-design.md.
+direction_modes: [long]
+entry_trigger: immediate
+stop_source: atr_multiple
+target_source: fib_extension
+target_R: null
+time_stop_mode: degree_based
+time_stop_bars: null
+max_concurrent_signals_per_ticker: 1
+slippage_bps: 5
+commission_per_share: "0"
+short_borrow_annual_pct: 0.005
+min_confidence: 0.45

@@ -1,0 +1,52 @@
+{% from "_macros.html" import pat, pill %}
+
+{% if not enriched %}
+  <p style="padding: 24px; text-align: center; color: var(--fg-muted); margin: 0;">
+    No symbols yet — add one above.
+  </p>
+{% else %}
+<table class="dt">
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th>Last signal</th>
+      <th>Bias</th>
+      <th style="text-align:right;">Score</th>
+      <th style="text-align:right;">R:R</th>
+      <th>Notes</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for er in enriched %}
+      <tr>
+        <td class="tk"><a href="/deepdive/{{ er.entry.symbol }}">{{ er.entry.symbol }}</a></td>
+        <td>
+          {% if er.row and er.row.top_pattern %}
+            {{ pat(er.row.top_pattern) }}
+          {% else %}<span style="color: var(--fg-muted);">—</span>{% endif %}
+        </td>
+        <td>
+          {% if er.bias == "long" %}{{ pill("LONG", "bull", dot=true) }}
+          {% elif er.bias == "short" %}{{ pill("SHORT", "bear", dot=true) }}
+          {% else %}{{ pill("no signal", "muted") }}{% endif %}
+        </td>
+        <td class="num" style="text-align:right;">
+          {{ "%.2f"|format(er.row.top_score) if er.row and er.row.top_score is not none else "—" }}
+        </td>
+        <td class="num r-pos" style="text-align:right;">
+          {% if er.row and er.row.signal_rr %}{{ "%.2f"|format(er.row.signal_rr|float) }}R
+          {% else %}<span style="color: var(--fg-muted);">—</span>{% endif %}
+        </td>
+        <td style="color: var(--fg-muted);">{{ er.entry.notes or "" }}</td>
+        <td>
+          <form method="post" action="/watchlist/rm" style="display: inline;">
+            <input type="hidden" name="symbol" value="{{ er.entry.symbol }}">
+            <button type="submit" class="btn btn-danger" style="padding: 4px 10px; font-size: 11px;">Remove</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

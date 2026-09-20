@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pat, wlabel, pill, tri, icon, popover %}
+{% set active = "home" %}
+{% block title %}Home — wave-alpha{% endblock %}
+
+{% block content %}
+<div class="page" x-data="{ ticker: '' }">
+
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Welcome to <span class="brand-name">wave-alpha</span></h1>
+      <p class="page-sub">
+        {% if view.kpis.signals is not none and view.kpis.signals > 0 %}
+          {{ view.kpis.signals }} signal{% if view.kpis.signals != 1 %}s{% endif %} from your latest scan
+          {% if view.kpis.watchlist_hits is not none and view.kpis.watchlist_hits > 0 %}
+            · {{ view.kpis.watchlist_hits }} of your watched tickers triggered
+          {% endif %}.
+        {% else %}
+          Run a scan or open a deep-dive below to get started.
+        {% endif %}
+      </p>
+    </div>
+    <div style="display:flex; gap: 8px;">
+      <a class="btn" href="/watchlist">{{ icon('plus', 14) }}Add to watchlist</a>
+      <a class="btn btn-primary" href="/scan">Open scan {{ icon('arrow-right', 14) }}</a>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Signals
+        {% call popover("What 'Signals' counts", anchor="pipeline") %}
+          <p class="popover-narrative">Tickers in the latest scan with a non-null trade signal — entry, stop, target, and R:R all defined.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value glow-cyan">{{ view.kpis.signals if view.kpis.signals is not none else "—" }}</div>
+      <div class="kpi-delta">{% if view.latest_scan_id %}from {{ view.latest_scan_id }}{% else %}no scans yet{% endif %}</div>
+    </div>
+    <div class="kpi mag">
+      <div class="kpi-label">Top R:R
+        {% call popover("What 'Top R:R' shows", anchor="trade-plan") %}
+          <p class="popover-narrative">Maximum signal R:R across the latest scan. The sub-line names the ticker and bias.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value">{{ "%.2f"|format(view.kpis.top_rr.value|float) if view.kpis.top_rr else "—" }}</div>
+      <div class="kpi-delta">{% if view.kpis.top_rr %}{{ view.kpis.top_rr.ticker }} · {{ view.kpis.top_rr.bias or "—" }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="kpi bull">
+      <div class="kpi-label">Watchlist hits
+        {% call popover("What 'Watchlist hits' counts", anchor="pipeline") %}
+          <p class="popover-narrative">Watchlist symbols that produced a signal in the latest scan, matched case-insensitively by ticker.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value glow-bull">{{ view.kpis.watchlist_hits if view.kpis.watchlist_hits is not none else "—" }}</div>
+      <div class="kpi-delta">{% if view.kpis.watchlist_hits is not none %}of {{ view.watchlist_total }} watched{% else %}no watchlist{% endif %}</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Stable picks
+        {% call popover("What 'Stable picks' means", anchor="coherence") %}
+          <p class="popover-narrative">Watchlist symbols whose history streak ≥ 3 — same direction in the last 3 scans.</p>
+        {% endcall %}
+      </div>
+      <div class="kpi-value glow-yellow">{{ view.kpis.stable_picks if view.kpis.stable_picks is not none else "—" }}</div>
+      <div class="kpi-delta">streak ≥ 3 days</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3 class="card-title">Deep-dive any ticker</h3></div>
+    <form style="display:flex; gap: 10px; flex-wrap: wrap;"
+          @submit.prevent="window.location.href = `/deepdive/${(ticker || '').trim().toUpperCase()}?as_of=${asof}`">
+      <input class="input mono" placeholder="AAPL" autocapitalize="characters"
+             x-model="ticker" required style="flex: 1; min-width: 240px; font-size: 16px; padding: 12px 14px;">
+      <input type="date" class="input mono" :value="asof" @change="setAsof($event.target.value)" style="width: 170px;">
+      <button class="btn btn-primary" type="submit">Analyze {{ icon('arrow-right', 14) }}</button>
+    </form>
+    <p class="field-help">Tip: press <span class="kbd" style="padding: 1px 6px; border: 1px solid var(--border-default); border-radius: 3px; font-family: var(--font-mono); color: var(--cyan);">⌘K</span> from anywhere to focus the nav search.</p>
+  </div>
+
+  <div class="row-2">
+    <div class="card">
+      <div class="card-head">
+        <h3 class="card-title">Today's top signals</h3>
+        {% if view.latest_scan_id %}<a class="card-action" href="/scan/{{ view.latest_scan_id }}">View scan →</a>{% endif %}
+      </div>
+      {% if view.top_signals %}
+        <table class="dt">
+          <tbody>
+            {% for r in view.top_signals %}
+              <tr>
+                <td class="tk"><a href="/deepdive/{{ r.ticker }}?as_of={{ r.as_of.isoformat() }}">{{ r.ticker }}</a></td>
+                <td>{{ pat(r.top_pattern) }}</td>
+                <td>
+                  {% if r.direction == "up" %}{{ pill("LONG", "bull", dot=true) }}
+                  {% elif r.direction == "down" %}{{ pill("SHORT", "bear", dot=true) }}
+                  {% else %}{{ pill("—", "muted") }}{% endif %}
+                </td>
+                <td class="num">{{ "%.2f"|format(r.top_score) if r.top_score is not none else "—" }}</td>
+                <td class="num r-pos">{{ "%.2f"|format(r.signal_rr|float) }}R</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p style="color: var(--fg-muted); margin: 0;">No signals in the latest scan.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3 class="card-title mag">Your watchlist · top picks</h3>
+        <a class="card-action" href="/watchlist">View all →</a>
+      </div>
+      {% if view.watchlist_top %}
+        <div class="stack">
+          {% for w in view.watchlist_top %}
+            <div style="display: grid; grid-template-columns: 70px 1fr auto auto; gap: 12px; padding: 10px 12px; align-items: center; border-radius: var(--radius-sm); {% if w.bias %}background: rgba(244,114,182,0.04); border-left: 2px solid var(--magenta);{% endif %}">
+              <a class="tk mono" href="/deepdive/{{ w.symbol }}" style="font-weight: 700; color: var(--fg-primary);">{{ w.symbol }}</a>
+              <span style="font-size: 12px; color: var(--fg-muted);">
+                {% if w.pattern %}{{ pat(w.pattern) }}{% else %}<span style="color: var(--fg-muted);">no high-confidence count</span>{% endif %}
+              </span>
+              {% if w.bias == "long" %}{{ pill("LONG", "bull", dot=true) }}
+              {% elif w.bias == "short" %}{{ pill("SHORT", "bear", dot=true) }}
+              {% else %}<span></span>{% endif %}
+              {% if w.signal_rr %}<span class="num glow-bull" style="font-weight: 700;">{{ "%.1f"|format(w.signal_rr|float) }}R</span>
+              {% else %}<span style="color: var(--fg-muted);">—</span>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--fg-muted); margin: 0;">No watchlist entries yet — <a href="/watchlist">add some</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if view.recently_analyzed %}
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-head"><h3 class="card-title purple">Recently analyzed</h3></div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      {% for r in view.recently_analyzed %}
+        <a href="/deepdive/{{ r.ticker }}?as_of={{ r.as_of.isoformat() }}" style="text-decoration: none;">
+          <span class="pill cyan" style="font-family: var(--font-mono);">{{ r.ticker }} · {{ r.as_of }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

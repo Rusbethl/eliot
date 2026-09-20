@@ -1,0 +1,19 @@
+# Centroid TradeRules for the 2026-05-05 trade-sim sanity run.
+# Spec: docs/superpowers/specs/2026-05-05-trade-sim-sanity-run.md §3.1
+direction_modes: [long, short]
+entry_trigger: immediate
+# stop_source=atr_multiple is the documented choice in spec §3.1 but the
+# code path is unimplemented in derive_signal — it silently falls through
+# to last_pivot. Until atr_multiple is wired (separate spec), the sanity
+# run uses count_invalidation, which is the actually-exercised path and
+# is direction-aware after the 2026-05-05 derive.py fix.
+stop_source: count_invalidation
+target_source: fib_extension
+target_R: null
+time_stop_mode: degree_based
+time_stop_bars: null
+max_concurrent_signals_per_ticker: 1
+slippage_bps: 5
+commission_per_share: "0"
+short_borrow_annual_pct: 0.005
+min_confidence: 0.45

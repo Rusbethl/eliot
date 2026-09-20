@@ -1,0 +1,25 @@
+# Ablation grid Phase 2 — 32-cell validation sweep.
+# Spec: docs/superpowers/specs/2026-05-06-ablation-grid-design.md §3.4
+#
+# direction_modes is pinned at the Phase 1 winner. Edit this file
+# after Phase 1 to set direction_modes to either [long] or [long, short]
+# based on the §6.2 verdict before invoking `wave-alpha backtest grid`.
+axes:
+  - name: entry_trigger
+    levels: [immediate, confirmation]
+  - name: stop_source
+    levels: [count_invalidation, atr_multiple]
+  - name: target_source
+    levels: [fib_extension, fixed_R]
+  - name: min_confidence
+    levels: [0.35, 0.45, 0.55, 0.65]
+
+fixed:
+  # Pinned at Phase 1 winner (§6.1 verdict, 2026-05-07): long-only.
+  # The Phase 1 sensitivity table showed direction_modes=[long] as the
+  # dominant axis (+0.145R) and direction_modes=[long, short] as
+  # uniformly negative (-0.103R) across every other axis combination.
+  direction_modes: [long]
+  target_R: 2.0
+  slippage_bps: 5
+  time_stop_mode: degree_based

@@ -1,0 +1,37 @@
+{% from "_macros.html" import popover %}
+{% if not assessment %}
+  <p style="margin: 0; color: var(--fg-muted);">No tentative right-edge pivot at degree {{ default_degree }} for this date.</p>
+{% else %}
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+    <div>
+      <div class="kpi-label" style="color: var(--purple);">Probability</div>
+      <div class="num glow-purple" style="font-size: 18px; font-weight: 700;">{{ "%.2f"|format(assessment.proba) }}</div>
+    </div>
+    <div>
+      <div class="kpi-label">Pivot</div>
+      <div class="num" style="font-size: 14px; font-weight: 700;">{{ assessment.pivot_type|upper }} @ {{ assessment.pivot_timestamp.isoformat() }}</div>
+    </div>
+    <div>
+      <div class="kpi-label">Degree</div>
+      <div class="num" style="font-size: 14px;">{{ assessment.degree }}</div>
+    </div>
+    <div>
+      <div class="kpi-label">Model</div>
+      <div style="font-size: 13px;">{{ assessment.model_kind }}</div>
+    </div>
+  </div>
+  <p style="margin: 12px 0 0; font-size: 12px; color: var(--fg-muted);">
+    Probability that the most recent tentative pivot is confirmed (will not be invalidated by a deeper move against it).
+  </p>
+  <div style="margin-top: 6px;">
+    {% call popover("How we got probability " ~ ("%.2f" | format(assessment.proba)), anchor="right-edge") %}
+      <p class="popover-narrative">Right-edge confirmation estimates whether the most recent pivot is real or likely to be invalidated. Trained per degree on real pivots from 2015&ndash;2024.</p>
+      <table class="popover-data">
+        <tr><th>model</th><td>{{ assessment.model_kind }}</td></tr>
+        <tr><th>degree</th><td class="num">{{ assessment.degree }}</td></tr>
+        <tr><th>pivot</th><td>{{ assessment.pivot_type|upper }} @ {{ assessment.pivot_timestamp.isoformat() }}</td></tr>
+        <tr class="total"><th>probability</th><td class="num">{{ "%.2f"|format(assessment.proba) }}</td></tr>
+      </table>
+    {% endcall %}
+  </div>
+{% endif %}

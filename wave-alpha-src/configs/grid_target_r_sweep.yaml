@@ -1,0 +1,15 @@
+# target_R sweep — 4 fixed_R cells across {1.5, 2.0, 2.5, 3.0}.
+# Baseline runs from configs/grid_target_r_baseline.yaml.
+# Spec: docs/superpowers/specs/2026-05-08-target-r-sweep-design.md.
+axes:
+  - name: target_R
+    levels: [1.5, 2.0, 2.5, 3.0]
+
+fixed:
+  target_source: fixed_R
+  direction_modes: [long]
+  entry_trigger: immediate
+  stop_source: atr_multiple
+  min_confidence: 0.45
+  time_stop_mode: degree_based
+  slippage_bps: 5

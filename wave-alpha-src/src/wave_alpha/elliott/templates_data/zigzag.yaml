@@ -1,0 +1,16 @@
+name: zigzag
+direction_alternates: true
+waves: ["A", "B", "C"]
+constraints:
+  - name: b_max_retrace_of_a
+    severity: hard
+    expr: "retrace(WB, WA) <= Decimal('0.9')"
+    rationale: "Wave B retraces less than 90% of Wave A in a zigzag"
+  - name: c_meets_or_exceeds_a
+    severity: soft
+    expr: "length(WC) >= Decimal('0.618') * length(WA)"
+    rationale: "Wave C typically reaches at least 0.618x Wave A"
+allowed_sub_patterns:
+  "A": ["impulse", "leading_diagonal"]
+  "B": ["zigzag", "flat", "contracting_triangle"]
+  "C": ["impulse", "ending_diagonal"]

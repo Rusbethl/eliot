@@ -1,0 +1,16 @@
+name: flat
+direction_alternates: true
+waves: ["A", "B", "C"]
+constraints:
+  - name: b_retrace_near_a
+    severity: hard
+    expr: "Decimal('0.9') <= retrace(WB, WA) <= Decimal('1.05')"
+    rationale: "Wave B in a regular flat retraces 90-105% of Wave A"
+  - name: c_terminates_near_a_extreme
+    severity: soft
+    expr: "length(WC) >= Decimal('0.9') * length(WA)"
+    rationale: "Wave C typically reaches Wave A's extreme"
+allowed_sub_patterns:
+  "A": ["zigzag", "flat", "contracting_triangle"]
+  "B": ["zigzag", "flat", "contracting_triangle"]
+  "C": ["impulse", "ending_diagonal"]
